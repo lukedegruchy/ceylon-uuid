@@ -3,14 +3,22 @@ import lukedegruchy.ceylon.uuid.utility {
     formatAndPadHex,
     immutableMap,
     randomData,
-    parseHex
+    parseHex,
+    md5,
+    integerToBytes,
+    stringToBytes,
+    sha1
 }
 
-" An implementation of Universal Unique Identifier (UUID).  See http://tools.ietf.org/html/rfc4122."
+" An implementation of Universal Unique Identifier (UUID).  See http://tools.ietf.org/html/rfc4122.
+  The current impelementation supports only a JDK backend due to dependencies upon [[java.security::SecureRandom]], and
+  [[java.security::MessageDigest]], to produce random bytes, and to implement MD5/SHA-1 hashing, respectively."
 
 // TODO:  More documentation
 
-Integer uuid4Version = 4;
+Integer uuidVersion3 = 3;
+Integer uuidVersion4 = 4;
+Integer uuidVersion5 = 5;
 
 Integer expectedUuidComponentSize = 5;
 Integer numberOfUuidBytes = 16;
@@ -23,7 +31,15 @@ Integer nodeExpectedNumChars = 12;
 
 [Integer+] supportedVersions = [1,2,3,4,5];
 Integer supportedVariantBit = 1;
+
+// TODO: Take into account other variants such as reserved_microsoft or reserved_future
 [Integer] supportedVariants = [2];
+
+"A UUID corresponding to 00000000-0000-0000-0000-000000000000"
+shared UUID blankUuid = UUID(0,0,0,0,0,0);
+
+"A UUID string corresponding to UUID(0,0,0,0,0,0)"
+shared String blankUuidString = "00000000-0000-0000-0000-000000000000";
 
 shared class UUID(timeLow,timeMid,timeHiVersion,clockSeqHiVariant,clockSeqLow,node) {
     // Start initialization
@@ -33,9 +49,17 @@ shared class UUID(timeLow,timeMid,timeHiVersion,clockSeqHiVariant,clockSeqLow,no
     Integer clockSeqHiVariant;
     Integer clockSeqLow;
     Integer node;
+    
+    Boolean isBlankUuid
+        = ! [timeLow,timeMid,timeHiVersion,clockSeqHiVariant,clockSeqLow,node]
+            .any((element) => element != 0);
 
     Integer getVersionAndValidate(Integer timeHiVersion)  {
-        Integer? actualVersion = getVersion(timeHiVersion);
+        if (isBlankUuid) {
+            return 0;
+        }
+
+        Integer? actualVersion = getValidVersion(timeHiVersion);
 
         assert (exists actualVersion); 
         
@@ -43,13 +67,34 @@ shared class UUID(timeLow,timeMid,timeHiVersion,clockSeqHiVariant,clockSeqLow,no
     }
     
     Integer getVariantAndValidate(Integer clockSeqHiVariant) {
-        assert (exists variant = getVariant(clockSeqHiVariant));
+        if (isBlankUuid) {
+            return 0;
+        }
+
+        assert (exists variant = getValidVariant(clockSeqHiVariant));
 
         return variant;
     }
 
     shared Integer version = getVersionAndValidate(timeHiVersion);
     shared Integer variant = getVariantAndValidate(clockSeqHiVariant);
+    
+    Byte[] timeLowBytes = integerToBytes(timeLow, 4);
+    Byte[] timeMidBytes = integerToBytes(timeMid, 2);
+    Byte[] timeHiVersionBytes = integerToBytes(timeHiVersion, 2);
+    Byte[] clockSeqHiVariantBytes = integerToBytes(clockSeqHiVariant, 1);
+    Byte[] clockSeqLowBytes = integerToBytes(clockSeqLow, 1);
+    Byte[] nodeBytes = integerToBytes(node, 6);
+    
+    shared Byte[] bytes = 
+        if (isBlankUuid) 
+            then []
+            else concatenate(timeLowBytes, 
+                             timeMidBytes, 
+                             timeHiVersionBytes, 
+                             clockSeqHiVariantBytes, 
+                             clockSeqLowBytes, 
+                             nodeBytes);
 
     Integer clockSeq = clockSeqHiVariant.leftLogicalShift(8).or(clockSeqLow);
 
@@ -75,7 +120,7 @@ shared class UUID(timeLow,timeMid,timeHiVersion,clockSeqHiVariant,clockSeqLow,no
     
     assert(nonempty hexSubValues);
     
-    String toString = "-".join(hexSubValues);
+    String toString = if (isBlankUuid) then blankUuidString else "-".join(hexSubValues);
     // End initialization
 
     shared actual Boolean equals(Object other) 
@@ -98,7 +143,7 @@ shared class UUID(timeLow,timeMid,timeHiVersion,clockSeqHiVariant,clockSeqLow,no
 
 // TODO:  More documentation
 "Obtain a UUID from a UUID string.  If the UUID string is malformed or incorrect in any way including version
- and variant, null will be returned"
+ and variant, null will be returned.  A blank UUID is supported but it must be well-formed (ie not 0-0-0-0-0)"
 shared UUID? fromString(String uuidString) {
     if (uuidString.trimmed.empty) {
         return null;
@@ -111,6 +156,7 @@ shared UUID? fromString(String uuidString) {
         return null;
     }
 
+    // TODO:  Ensure this works with a blank UUID string (00000000-0000-0000-0000-000000000000)
     if (exists timeLowString=uuidStringComponents[0],
         exists timeMidString=uuidStringComponents[1], 
         exists timeHiVersionString=uuidStringComponents[2], 
@@ -128,18 +174,24 @@ shared UUID? fromString(String uuidString) {
         Integer? clockSeq = parseHex(clockSeqString);
         Integer? node = parseHex(nodeString);
         
+        // Support supplied blank UUID
+        Integer? getVersionOrZero(Integer timeHiVersion)
+            => if (getVersion(timeHiVersion) == 0) then 0 else getValidVersion(timeHiVersion);
+        Integer? getVariantOrZero(Integer clockSeqHiVariant)
+            => if (getVariant(clockSeqHiVariant) == 0) then 0 else getValidVariant(clockSeqHiVariant);
+        
         if (exists timeLow, 
             exists timeMid, 
             exists timeHiVersion, 
             exists clockSeq, 
             exists node,
-            exists version = getVersion(timeHiVersion)) {
+            exists version = getVersionOrZero(timeHiVersion)) {
             Integer? clockSeqHiVariant = clockSeq.rightLogicalShift(8);
             Integer? clockSeqLow = clockSeq.and(#ff);
             
             if (exists clockSeqHiVariant, 
                 exists clockSeqLow,
-                exists variant=getVariant(clockSeqHiVariant)) {
+                exists variant=getVariantOrZero(clockSeqHiVariant)) {
                 return UUID { timeLow = timeLow; 
                               timeMid = timeMid; 
                               timeHiVersion = timeHiVersion; 
@@ -153,17 +205,61 @@ shared UUID? fromString(String uuidString) {
     return null;
 }
 
+// TODO: More documentation including reference to RFC requirements for equality and non-equality
+"UUID version 3:  A UUID generated from MD5 of namespace and name. The namespace parameter is optional
+ and if its argument is not provided  blank UUID (00000000-0000-0000-0000-0000000000000) will be used in its 
+ place."
+shared UUID uuid3Md5(String name, UUID? namespace=null)
+    => convertedNamespaceAndName(namespace,name,uuidVersion3,md5);
+
 // TODO:  More documentation
 "UUID version 4:  A random UUID generated from randomly generated bytes."
 shared UUID uuid4Random() {
     {Byte+} randomBytes = randomData(numberOfUuidBytes);
     
-    assert(exists randomUUID=bytesToUuid(randomBytes.sequence()));
+    assert(exists randomUUID=bytesToUuid(randomBytes.sequence(),uuidVersion4));
     
     return randomUUID;
 }
 
-UUID? bytesToUuid(Byte[] randomData) {
+// TODO: More documentation including reference to RFC requirements for equality and non-equality
+"UUID version 5:  A UUID generated from SHA-1 of namespace and name. The namespace parameter is optional
+ and if its argument is not provided  blank UUID (00000000-0000-0000-0000-0000000000000) will be used in its 
+ place."
+shared UUID uuid5Sha1(String name,UUID? namespace=null)
+    => convertedNamespaceAndName(namespace,name,uuidVersion5,sha1);
+
+UUID convertedNamespaceAndName(UUID? namespace, 
+                               String name, 
+                               Integer uuidVersion,
+                               Byte[] convertBytes({Byte+} bytesToConvert)) {
+    assert([uuidVersion3,uuidVersion5].contains(uuidVersion));
+
+    [Byte+] bytes = 
+        bytesFromNamespaceAndName(namespace else blankUuid,name);
+
+    Byte[] bytesConverted = convertedBytes(bytes,convertBytes);
+
+    assert (nonempty bytesConverted,
+           exists uuidFromBytes = bytesToUuid(bytesConverted, uuidVersion));
+
+    return uuidFromBytes;
+}
+
+Byte[] convertedBytes({Byte+} bytes, Byte[] convertBytes({Byte+} bytesToConvert))
+    => convertBytes(bytes);
+
+[Byte+] bytesFromNamespaceAndName(UUID namespace, String name) {
+    assert (nonempty bytes=concatenate(namespace.bytes,stringToBytes(name).sequence()) );
+    
+    return bytes;
+}
+
+UUID? bytesToUuid(Byte[] randomData,Integer uuidVersion) {
+    if (randomData.empty) {
+        return blankUuid;
+    }
+
     if (exists byte1=randomData[0],
         exists byte2=randomData[1],
         exists byte3=randomData[2],
@@ -190,7 +286,7 @@ UUID? bytesToUuid(Byte[] randomData) {
                 byte5.unsigned.leftLogicalShift(8).or(byte6.unsigned);
                     
             Integer timeHiVersion =
-                setVersion(byte7).unsigned.leftLogicalShift(8).or(byte8.unsigned);
+                setVersion(byte7,uuidVersion).unsigned.leftLogicalShift(8).or(byte8.unsigned);
             
             Integer clockSeqHiVariant = setVariant(byte9).unsigned;
             Integer clockSeqLow = byte10.unsigned;
@@ -213,21 +309,27 @@ UUID? bytesToUuid(Byte[] randomData) {
     return null;
 }
 
-Integer? getVersion(Integer timeHiVersion)
-    => let (actualVersion = timeHiVersion.rightLogicalShift(12))
+Integer? getValidVersion(Integer timeHiVersion)
+    => let (actualVersion = getVersion(timeHiVersion))
        if (supportedVersions.contains(actualVersion)) 
            then actualVersion
            else null;
 
-Integer? getVariant(Integer clockSeqHiVariant)
+Integer getVersion(Integer timeHiVersion)
+    =>  timeHiVersion.rightLogicalShift(12);
+
+Integer? getValidVariant(Integer clockSeqHiVariant)
         // First two bits of clockSeqHiVariant
-    => let(variantTwoBits = clockSeqHiVariant.rightLogicalShift(6))
+    => let(variantTwoBits = getVariant(clockSeqHiVariant))
        if (supportedVariants.contains(variantTwoBits))
             then variantTwoBits
             else null;
 
-Byte setVersion(Byte timeHiVersionPart)
-    => timeHiVersionPart.and($1111.byte).or(uuid4Version.leftLogicalShift(4).byte);
+Integer getVariant(Integer clockSeqHiVariant)
+    => clockSeqHiVariant.rightLogicalShift(6);
+
+Byte setVersion(Byte timeHiVersionPart, Integer version)
+    => timeHiVersionPart.and($1111.byte).or(version.leftLogicalShift(4).byte);
 
 Byte setVariant(Byte clockSeqHiVariant)
     => clockSeqHiVariant.and($11_1111.byte).or($1000_0000.byte);

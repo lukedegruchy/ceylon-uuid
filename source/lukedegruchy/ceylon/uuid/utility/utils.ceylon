@@ -3,17 +3,6 @@ import ceylon.collection {
     unmodifiableMap
 }
 
-import java.lang {
-    ByteArray
-}
-import java.security {
-    SecureRandom
-}
-// TODO: Framework code
-shared void assertSameSizeAsCoalesced<in Element>({Element?*} elements) given Element satisfies Object {
-    assert(elements.size == elements.coalesced.size);
-}
-
 // TODO: Framework code
 shared Integer hashes(Object?* objects)
         => let (value prime = 31) 
@@ -30,16 +19,5 @@ shared Map<Key,Item> immutableMap<Key,Item>({<Key->Item>*} entries)
         given Key satisfies Object 
         given Item satisfies Object 
     => unmodifiableMap(HashMap{ entries=entries; });
-
-shared {Byte+} randomData(Integer size) 
-    => javaRandomData(size);
-
-{Byte+} javaRandomData(Integer size) {
-    ByteArray data = ByteArray(size);
-    SecureRandom().nextBytes(data);
-    
-    assert( nonempty dataSequence=data.byteArray.sequence());
-    return dataSequence; 
-}
 
 String? formatHex(Integer int) => formatInteger(int, 16);
