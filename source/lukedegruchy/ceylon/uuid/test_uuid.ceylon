@@ -212,11 +212,13 @@ void testBytesToUuid() {
     }
     
     {Byte+} _16Bytes = [#dc,#5a,#99,#15,#5d,#0c,#5b,#09,#64,#d5,#c5,#d6,#62,#9c,#29,#dd ].map(Integer.byte);
+    {Byte+} zeros = [for (count in 1..16) 0.byte];
     
     //TODO:  more bytes to test
     assertMe(bytesToUuid(_16Bytes.sequence(),3), "dc5a9915-5d0c-3b09-a4d5-c5d6629c29dd");
     assertMe(bytesToUuid(_16Bytes.sequence(),4), "dc5a9915-5d0c-4b09-a4d5-c5d6629c29dd");
     assertMe(bytesToUuid(_16Bytes.sequence(),5), "dc5a9915-5d0c-5b09-a4d5-c5d6629c29dd");
     assertEquals(bytesToUuid([].sequence(),5), blankUuid);
+    assertEquals(bytesToUuid(zeros.sequence(),5), blankUuid);
 
 }

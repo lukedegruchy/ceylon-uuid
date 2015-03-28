@@ -13,15 +13,23 @@ import java.security {
     MessageDigest{messageDigestInstance=getInstance},
     SecureRandom
 }
-shared {Byte*} stringToBytes(String text) 
-        => createJavaByteArray(utf8.encode(text)).byteArray.sequence(); 
 
-// TODO:  Find a better way to do this
-shared [Byte+] integerToBytes(Integer integer, Integer bytesSize) {
-    assert(bytesSize >= 1);
+shared {Byte*} stringToBytes(String text) 
+    => createJavaByteArray(utf8.encode(text)).byteArray.sequence(); 
+
+Integer numberOfBytesInInteger = 8;
+
+shared [Byte+] integerToBytesNoZeros(Integer integer) {
+    value bytes = integerToBytes(integer).filter(not<Byte>((byte) => byte == 0.byte)).sequence();
     
-    return [for (index in bytesSize..1) integer.rightLogicalShift((index-1) * 8).byte];
+    assert(nonempty bytes);
+    
+    return bytes;
 }
+
+shared [Byte+] integerToBytes(Integer integer) 
+    => [for (index in numberOfBytesInInteger..1) 
+            integer.rightLogicalShift((index-1) * numberOfBytesInInteger).byte];
 
 
 // TODO: Use a native Ceylon md5 function when it's ready

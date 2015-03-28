@@ -1,7 +1,6 @@
 import lukedegruchy.ceylon.uuid.utility {
     hashes,
     formatAndPadHex,
-    immutableMap,
     randomData,
     parseHex,
     md5,
@@ -16,6 +15,7 @@ import lukedegruchy.ceylon.uuid.utility {
 
 // TODO:  More documentation
 
+// Top level attributes
 Integer uuidVersion3 = 3;
 Integer uuidVersion4 = 4;
 Integer uuidVersion5 = 5;
@@ -29,116 +29,118 @@ Integer timeHiVersionExpectedNumChars = 4;
 Integer clockSeqExpectedNumChars = 4;
 Integer nodeExpectedNumChars = 12;
 
+// TODO: Consider not supporting version 1 or 2 seeing as their limited use and potential leakage of MAC address
 [Integer+] supportedVersions = [1,2,3,4,5];
 Integer supportedVariantBit = 1;
 
 // TODO: Take into account other variants such as reserved_microsoft or reserved_future
 [Integer] supportedVariants = [2];
 
+// TODO:  consider better handling of blank UUID logic:   sublcass UUID and add hooks??
+
+// TODO:  consider use of type classes to distinguish among different types of integers
+
 "A UUID corresponding to 00000000-0000-0000-0000-000000000000"
-shared UUID blankUuid = UUID(0,0,0,0,0,0);
+shared UUID blankUuid = UUID(0,0);
 
 "A UUID string corresponding to UUID(0,0,0,0,0,0)"
 shared String blankUuidString = "00000000-0000-0000-0000-000000000000";
 
-shared class UUID(timeLow,timeMid,timeHiVersion,clockSeqHiVariant,clockSeqLow,node) {
+shared class UUID(Integer mostSignificantBits, Integer leastSignificantBits) {
     // Start initialization
-    Integer timeLow;
-    Integer timeMid;
-    Integer timeHiVersion;
-    Integer clockSeqHiVariant;
-    Integer clockSeqLow;
-    Integer node;
-    
     Boolean isBlankUuid
-        = ! [timeLow,timeMid,timeHiVersion,clockSeqHiVariant,clockSeqLow,node]
-            .any((element) => element != 0);
+        => [mostSignificantBits, leastSignificantBits].every((element) => element == 0);
+    
+    Integer? getValidVersion(Integer mostSignificantBits)
+        => let(innerVersion = getVersionFromMostSignificantBits(mostSignificantBits))
+            if (supportedVersions.contains(innerVersion) || isBlankUuid)
+                then innerVersion
+                else null;
+    
+    Integer? getValidVariant(Integer leastSignificantBits)
+        => let(innerVariant = getVariantFromLeastSignificantBits(leastSignificantBits))
+            if (supportedVariants.contains(innerVariant) || isBlankUuid)
+                then innerVariant
+                else null;
+    
+    void validate() {
+        assert(exists x=getValidVersion(mostSignificantBits));
+        assert(exists y=getValidVariant(leastSignificantBits));
+    }
 
-    Integer getVersionAndValidate(Integer timeHiVersion)  {
+    validate();
+
+    Integer uuidComponentAsInteger(Integer valParam, Integer digits, Integer? rightShift=null) {
+        Integer val = 
+            if (exists rightShift) 
+                    then valParam.rightLogicalShift(rightShift)
+                     else valParam;
+        
+        return val.and((16 ^ digits) -1);
+    }
+    
+    String uuidComponentAsString(Integer valParam, Integer digits, Integer? rightShift=null) {
+        Integer uuidComponentInteger = uuidComponentAsInteger(valParam,digits,rightShift);
+
+        assert(exists asHex=formatAndPadHex(uuidComponentInteger,digits));
+        
+        return asHex;
+    }
+
+    shared Byte[] bytes {
         if (isBlankUuid) {
-            return 0;
+            return [];
         }
 
-        Integer? actualVersion = getValidVersion(timeHiVersion);
+        Integer timeLow = uuidComponentAsInteger(mostSignificantBits, 8, 32);
+        Integer timeMid = uuidComponentAsInteger(mostSignificantBits, 4, 16);
+        Integer timeHiVersion = uuidComponentAsInteger(mostSignificantBits, 4);
+        Integer clockSeqHiVariant = uuidComponentAsInteger(mostSignificantBits, 2, 48);
+        Integer clockSeqLow = uuidComponentAsInteger(mostSignificantBits, 2, 40);
+        Integer node = uuidComponentAsInteger(mostSignificantBits, 12);
 
-        assert (exists actualVersion); 
+        Byte[] timeLowBytes = integerToBytes(timeLow);
+        Byte[] timeMidBytes = integerToBytes(timeMid);
+        Byte[] timeHiVersionBytes = integerToBytes(timeHiVersion);
+        Byte[] clockSeqHiVariantBytes = integerToBytes(clockSeqHiVariant);
+        Byte[] clockSeqLowBytes = integerToBytes(clockSeqLow);
+        Byte[] nodeBytes = integerToBytes(node);
         
-        return actualVersion;
-    }
-    
-    Integer getVariantAndValidate(Integer clockSeqHiVariant) {
-        if (isBlankUuid) {
-            return 0;
-        }
-
-        assert (exists variant = getValidVariant(clockSeqHiVariant));
-
-        return variant;
+        return concatenate(timeLowBytes, 
+                           timeMidBytes, 
+                           timeHiVersionBytes, 
+                           clockSeqHiVariantBytes, 
+                           clockSeqLowBytes, 
+                           nodeBytes);
     }
 
-    shared Integer version = getVersionAndValidate(timeHiVersion);
-    shared Integer variant = getVariantAndValidate(clockSeqHiVariant);
-    
-    Byte[] timeLowBytes = integerToBytes(timeLow, 4);
-    Byte[] timeMidBytes = integerToBytes(timeMid, 2);
-    Byte[] timeHiVersionBytes = integerToBytes(timeHiVersion, 2);
-    Byte[] clockSeqHiVariantBytes = integerToBytes(clockSeqHiVariant, 1);
-    Byte[] clockSeqLowBytes = integerToBytes(clockSeqLow, 1);
-    Byte[] nodeBytes = integerToBytes(node, 6);
-    
-    shared Byte[] bytes = 
-        if (isBlankUuid) 
-            then []
-            else concatenate(timeLowBytes, 
-                             timeMidBytes, 
-                             timeHiVersionBytes, 
-                             clockSeqHiVariantBytes, 
-                             clockSeqLowBytes, 
-                             nodeBytes);
-
-    Integer clockSeq = clockSeqHiVariant.leftLogicalShift(8).or(clockSeqLow);
-
-    Map<Integer,Integer> toPad = 
-        immutableMap<Integer,Integer>({timeLow->timeLowExpectedNumChars, 
-                                      timeMid->timeMidExpectedNumChars, 
-                                      timeHiVersion->timeHiVersionExpectedNumChars,
-                                      clockSeq->clockSeqExpectedNumChars,
-                                      node->nodeExpectedNumChars});
-
-    Integer[] components = toPad.keys.sequence();
-    
-    Integer padWith(Integer component) {
-        assert(exists padWith=toPad.get(component));
-        
-        return padWith;
-    }
-
-    String[] hexSubValues = 
-        components.map((component) => formatAndPadHex(component,padWith(component)))
-                  .coalesced
-                  .sequence();
-    
-    assert(nonempty hexSubValues);
-    
-    String toString = if (isBlankUuid) then blankUuidString else "-".join(hexSubValues);
-    // End initialization
+    shared Integer version => getVersionFromMostSignificantBits(mostSignificantBits);
+    shared Integer variant => getVariantFromLeastSignificantBits(leastSignificantBits);
 
     shared actual Boolean equals(Object other) 
         => if (is UUID other) 
-            then timeLow == other.timeLow && 
-                 timeMid == other.timeMid &&
-                 timeHiVersion == other.timeHiVersion &&
-                 clockSeqHiVariant == other.clockSeqHiVariant &&
-                 clockSeqLow == other.clockSeqLow &&
-                 node == other.node
+            then mostSignificantBits == other.mostSignificantBits && 
+                 leastSignificantBits == other.leastSignificantBits
            else false;
 
     shared actual Integer hash 
-        => hashes(timeLow, timeMid, timeHiVersion, clockSeqHiVariant, clockSeqLow, node);
+        => hashes(mostSignificantBits, leastSignificantBits);
 
     // TODO:  More documentation
     "Obtain the [[String]] representation of this [[UUID]].  Example: c7761fd5-ee11-46ce-a0cc-ff8f8fb72a23"
-    shared actual String string => toString;
+    shared actual String string {
+        if ( isBlankUuid) {
+            return blankUuidString;
+        }
+
+        String timeLo = uuidComponentAsString(mostSignificantBits, 8, 32);
+        String timeMid = uuidComponentAsString(mostSignificantBits, 4, 16);
+        String timeHiVersion = uuidComponentAsString(mostSignificantBits, 4);
+        String clockSeq = uuidComponentAsString(leastSignificantBits, 4, 48);
+        String node = uuidComponentAsString(leastSignificantBits, 12);
+
+        return "-".join([timeLo, timeMid, timeHiVersion, clockSeq, node]);
+    }
 }
 
 // TODO:  More documentation
@@ -156,7 +158,6 @@ shared UUID? fromString(String uuidString) {
         return null;
     }
 
-    // TODO:  Ensure this works with a blank UUID string (00000000-0000-0000-0000-000000000000)
     if (exists timeLowString=uuidStringComponents[0],
         exists timeMidString=uuidStringComponents[1], 
         exists timeHiVersionString=uuidStringComponents[2], 
@@ -192,12 +193,12 @@ shared UUID? fromString(String uuidString) {
             if (exists clockSeqHiVariant, 
                 exists clockSeqLow,
                 exists variant=getVariantOrZero(clockSeqHiVariant)) {
-                return UUID { timeLow = timeLow; 
-                              timeMid = timeMid; 
-                              timeHiVersion = timeHiVersion; 
-                              clockSeqHiVariant = clockSeqHiVariant; 
-                              clockSeqLow = clockSeqLow; 
-                              node = node; };
+                return fromComponents { timeLow = timeLow; 
+                                        timeMid = timeMid; 
+                                        timeHiVersion = timeHiVersion; 
+                                        clockSeqHiVariant = clockSeqHiVariant; 
+                                        clockSeqLow = clockSeqLow; 
+                                        node = node; };
             }
         }
     }
@@ -256,7 +257,7 @@ Byte[] convertedBytes({Byte+} bytes, Byte[] convertBytes({Byte+} bytesToConvert)
 }
 
 UUID? bytesToUuid(Byte[] randomData,Integer uuidVersion) {
-    if (randomData.empty) {
+    if (randomData.every((element) => element == 0.byte)) {
         return blankUuid;
     }
 
@@ -276,37 +277,73 @@ UUID? bytesToUuid(Byte[] randomData,Integer uuidVersion) {
         exists byte14=randomData[13],
         exists byte15=randomData[14],
         exists byte16=randomData[15]) {
-            Integer timeLow = 
-                byte1.unsigned.leftLogicalShift(24)
-                    .or(byte2.unsigned.leftLogicalShift(16)
-                    .or(byte3.unsigned.leftLogicalShift(8)))
-                    .or(byte4.unsigned);
 
-            Integer timeMid = 
-                byte5.unsigned.leftLogicalShift(8).or(byte6.unsigned);
-                    
-            Integer timeHiVersion =
-                setVersion(byte7,uuidVersion).unsigned.leftLogicalShift(8).or(byte8.unsigned);
-            
-            Integer clockSeqHiVariant = setVariant(byte9).unsigned;
-            Integer clockSeqLow = byte10.unsigned;
-            Integer node = 
-                byte11.unsigned.leftLogicalShift(40)
-                    .or(byte12.unsigned.leftLogicalShift(32))
-                    .or(byte13.unsigned.leftLogicalShift(24)
-                    .or(byte14.unsigned.leftLogicalShift(16)))
-                    .or(byte15.unsigned.leftLogicalShift(8))
-                    .or(byte16.unsigned);
+        Integer timeLow = 
+            byte1.unsigned.leftLogicalShift(24)
+                .or(byte2.unsigned.leftLogicalShift(16)
+                .or(byte3.unsigned.leftLogicalShift(8)))
+                .or(byte4.unsigned);
 
-            return UUID { timeLow = timeLow; 
-                          timeMid = timeMid; 
-                          timeHiVersion = timeHiVersion; 
-                          clockSeqHiVariant = clockSeqHiVariant; 
-                          clockSeqLow = clockSeqLow; 
-                          node = node; };
+        Integer timeMid = 
+            byte5.unsigned.leftLogicalShift(8).or(byte6.unsigned);
+                
+        Integer timeHiVersion =
+            setVersion(byte7,uuidVersion).unsigned.leftLogicalShift(8).or(byte8.unsigned);
+        
+        Integer clockSeqHiVariant = setVariant(byte9).unsigned;
+        Integer clockSeqLow = byte10.unsigned;
+        Integer node = 
+            byte11.unsigned.leftLogicalShift(40)
+                .or(byte12.unsigned.leftLogicalShift(32))
+                .or(byte13.unsigned.leftLogicalShift(24)
+                .or(byte14.unsigned.leftLogicalShift(16)))
+                .or(byte15.unsigned.leftLogicalShift(8))
+                .or(byte16.unsigned);
+
+        return fromComponents { timeLow = timeLow; 
+                                timeMid = timeMid; 
+                                timeHiVersion = timeHiVersion; 
+                                clockSeqHiVariant = clockSeqHiVariant; 
+                                clockSeqLow = clockSeqLow; 
+                                node = node; };
+    }
+
+    return null;
+}
+
+UUID fromComponents(Integer timeLow, 
+                    Integer timeMid,
+                    Integer timeHiVersion,
+                    Integer clockSeqHiVariant,
+                    Integer clockSeqLow,
+                    Integer node) {
+    Integer toMostBits(Integer timeLow, Integer timeMid, Integer timeHiVersion) {
+        Integer shift32MostOne = timeLow.leftLogicalShift(32);
+        
+        Integer shift16MostTwo = timeMid.leftLogicalShift(16);
+        
+        Integer mostOneTwoThree = shift32MostOne.or(shift16MostTwo).or(timeHiVersion);
+        
+        return mostOneTwoThree;
     }
     
-    return null;
+    Integer toLeastBits(Integer clockSeqHiVariant, Integer clockSeqLow, Integer node) {
+        Integer shift48ClockSeqHiVariant = clockSeqHiVariant.leftLogicalShift(56);
+        
+        Integer shift40ClockSeqLow = clockSeqLow.leftLogicalShift(48);
+        
+        Integer clockSeq = shift48ClockSeqHiVariant.or(shift40ClockSeqLow);
+        
+        Integer clockSeqOrNode = clockSeq.or(node);
+        
+        return clockSeqOrNode;
+    }
+    
+    Integer mostSignificantBits = toMostBits(timeLow, timeMid, timeHiVersion);
+    Integer leastSignificantBits = toLeastBits(clockSeqHiVariant, clockSeqLow, node);
+    
+    return UUID { mostSignificantBits = mostSignificantBits; 
+                  leastSignificantBits = leastSignificantBits; };
 }
 
 Integer? getValidVersion(Integer timeHiVersion)
@@ -315,9 +352,6 @@ Integer? getValidVersion(Integer timeHiVersion)
            then actualVersion
            else null;
 
-Integer getVersion(Integer timeHiVersion)
-    =>  timeHiVersion.rightLogicalShift(12);
-
 Integer? getValidVariant(Integer clockSeqHiVariant)
         // First two bits of clockSeqHiVariant
     => let(variantTwoBits = getVariant(clockSeqHiVariant))
@@ -325,8 +359,17 @@ Integer? getValidVariant(Integer clockSeqHiVariant)
             then variantTwoBits
             else null;
 
+Integer getVersion(Integer timeHiVersion)
+    =>  timeHiVersion.rightLogicalShift(12);
+
 Integer getVariant(Integer clockSeqHiVariant)
     => clockSeqHiVariant.rightLogicalShift(6);
+
+Integer getVersionFromMostSignificantBits(Integer mostSignificantBits) 
+    => mostSignificantBits.rightArithmeticShift(12).and(#f);
+
+Integer getVariantFromLeastSignificantBits(Integer leastSignificantBits) 
+    => leastSignificantBits.rightLogicalShift(62);
 
 Byte setVersion(Byte timeHiVersionPart, Integer version)
     => timeHiVersionPart.and($1111.byte).or(version.leftLogicalShift(4).byte);
