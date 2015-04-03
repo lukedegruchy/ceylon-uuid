@@ -4,9 +4,9 @@ import lukedegruchy.ceylon.uuid.utility {
     randomData,
     parseHex,
     md5,
-    integerToBytes,
     stringToBytes,
-    sha1
+    sha1,
+    integerToBytesNoZeros
 }
 
 " An implementation of Universal Unique Identifier (UUID).  See http://tools.ietf.org/html/rfc4122.
@@ -46,38 +46,49 @@ shared UUID blankUuid = UUID(0,0);
 "A UUID string corresponding to UUID(0,0,0,0,0,0)"
 shared String blankUuidString = "00000000-0000-0000-0000-000000000000";
 
-shared class UUID(Integer mostSignificantBits, Integer leastSignificantBits) {
-    // Start initialization
-    Boolean isBlankUuid
-        => [mostSignificantBits, leastSignificantBits].every((element) => element == 0);
-    
-    Integer? getValidVersion(Integer mostSignificantBits)
-        => let(innerVersion = getVersionFromMostSignificantBits(mostSignificantBits))
-            if (supportedVersions.contains(innerVersion) || isBlankUuid)
-                then innerVersion
-                else null;
-    
-    Integer? getValidVariant(Integer leastSignificantBits)
-        => let(innerVariant = getVariantFromLeastSignificantBits(leastSignificantBits))
-            if (supportedVariants.contains(innerVariant) || isBlankUuid)
-                then innerVariant
-                else null;
-    
-    void validate() {
-        assert(exists x=getValidVersion(mostSignificantBits));
-        assert(exists y=getValidVariant(leastSignificantBits));
-    }
+shared class UUID {
+    Integer mostSignificantBits;
+    Integer leastSignificantBits;
 
-    validate();
-
-    Integer uuidComponentAsInteger(Integer valParam, Integer digits, Integer? rightShift=null) {
-        Integer val = 
-            if (exists rightShift) 
-                    then valParam.rightLogicalShift(rightShift)
-                     else valParam;
+    Boolean isAllZeros(Integer mostSignificantBits, Integer leastSignificantBits)
+            => [mostSignificantBits, leastSignificantBits].every((element) => element == 0);
+    
+    // TODO:  Make this either sealed or unshared according to the resolution in:
+    // https://github.com/ceylon/ceylon-spec/issues/1210
+    shared new(Integer mostSignificantBits,Integer leastSignificantBits) {
+        this.mostSignificantBits = mostSignificantBits;
+        this.leastSignificantBits = leastSignificantBits;
         
-        return val.and((16 ^ digits) -1);
+        Integer? getValidVersion()
+                => let(innerVersion = getVersionFromMostSignificantBits(mostSignificantBits))
+        if (supportedVersions.contains(innerVersion) || 
+            isAllZeros(this.mostSignificantBits,this.leastSignificantBits))
+        then innerVersion
+        else null;
+        
+        Integer? getValidVariant()
+                => let(innerVariant = getVariantFromLeastSignificantBits(this.leastSignificantBits))
+        if (supportedVariants.contains(innerVariant) || 
+            isAllZeros(this.mostSignificantBits,this.leastSignificantBits))
+        then innerVariant
+        else null;
+        
+        void validate() {
+            assert(exists x=getValidVersion());
+            assert(exists y=getValidVariant());
+        }
+        
+        validate();
     }
+
+    Byte[] uuidComponentAsBytes(Integer valParam, Integer digits, Integer? rightShift=null) 
+        => integerToBytesNoZeros(uuidComponentAsInteger(valParam, digits, rightShift));
+    
+    Integer uuidComponentAsInteger(Integer valParam, Integer digits, Integer? rightShift=null) 
+        => let(val = if (exists rightShift) 
+                        then valParam.rightLogicalShift(rightShift) 
+                        else valParam )
+           val.and((16 ^ digits) -1);
     
     String uuidComponentAsString(Integer valParam, Integer digits, Integer? rightShift=null) {
         Integer uuidComponentInteger = uuidComponentAsInteger(valParam,digits,rightShift);
@@ -87,30 +98,26 @@ shared class UUID(Integer mostSignificantBits, Integer leastSignificantBits) {
         return asHex;
     }
 
+    shared Boolean isBlankUuid => isAllZeros(mostSignificantBits, leastSignificantBits);
+
     shared Byte[] bytes {
         if (isBlankUuid) {
             return [];
         }
 
-        Integer timeLow = uuidComponentAsInteger(mostSignificantBits, 8, 32);
-        Integer timeMid = uuidComponentAsInteger(mostSignificantBits, 4, 16);
-        Integer timeHiVersion = uuidComponentAsInteger(mostSignificantBits, 4);
-        Integer clockSeqHiVariant = uuidComponentAsInteger(mostSignificantBits, 2, 48);
-        Integer clockSeqLow = uuidComponentAsInteger(mostSignificantBits, 2, 40);
-        Integer node = uuidComponentAsInteger(mostSignificantBits, 12);
+        Byte[] timeLowBytes = uuidComponentAsBytes(mostSignificantBits, 8, 32);
+        Byte[] timeMidBytes = uuidComponentAsBytes(mostSignificantBits, 4, 16);
+        Byte[] timeHiVersionBytes = uuidComponentAsBytes(mostSignificantBits, 4);
+        Byte[] clockSeqHiVariantBytes = uuidComponentAsBytes(leastSignificantBits, 2, 56);
+        Byte[] clockSeqLowBytes = uuidComponentAsBytes(leastSignificantBits, 2, 48);
+        Byte[] nodeBytes = uuidComponentAsBytes(leastSignificantBits, 12);
 
-        Byte[] timeLowBytes = integerToBytes(timeLow);
-        Byte[] timeMidBytes = integerToBytes(timeMid);
-        Byte[] timeHiVersionBytes = integerToBytes(timeHiVersion);
-        Byte[] clockSeqHiVariantBytes = integerToBytes(clockSeqHiVariant);
-        Byte[] clockSeqLowBytes = integerToBytes(clockSeqLow);
-        Byte[] nodeBytes = integerToBytes(node);
-        
         return concatenate(timeLowBytes, 
                            timeMidBytes, 
                            timeHiVersionBytes, 
                            clockSeqHiVariantBytes, 
                            clockSeqLowBytes, 
+                           //clockSeq,
                            nodeBytes);
     }
 
@@ -129,17 +136,18 @@ shared class UUID(Integer mostSignificantBits, Integer leastSignificantBits) {
     // TODO:  More documentation
     "Obtain the [[String]] representation of this [[UUID]].  Example: c7761fd5-ee11-46ce-a0cc-ff8f8fb72a23"
     shared actual String string {
-        if ( isBlankUuid) {
+        if (isBlankUuid) {
             return blankUuidString;
         }
 
         String timeLo = uuidComponentAsString(mostSignificantBits, 8, 32);
         String timeMid = uuidComponentAsString(mostSignificantBits, 4, 16);
         String timeHiVersion = uuidComponentAsString(mostSignificantBits, 4);
-        String clockSeq = uuidComponentAsString(leastSignificantBits, 4, 48);
+        String clockSeqHiVariant = uuidComponentAsString(leastSignificantBits, 2, 56);
+        String clockSeqLow = uuidComponentAsString(leastSignificantBits, 2, 48);
         String node = uuidComponentAsString(leastSignificantBits, 12);
 
-        return "-".join([timeLo, timeMid, timeHiVersion, clockSeq, node]);
+        return "-".join([timeLo, timeMid, timeHiVersion, clockSeqHiVariant + clockSeqLow, node]);
     }
 }
 

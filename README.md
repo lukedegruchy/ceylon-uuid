@@ -11,7 +11,7 @@ The current implementation of the UUID class contains the following attributes:
 * mostSignificantBits
 * leastSignificantBits
 
-Current version: 0.0.3
+Current version: 0.0.5
 
 Version history:
 
@@ -25,3 +25,7 @@ Also, validate for supported versions and variants.
 does seem to be used in practice.
 * 0.0.4: Internal storage is based on most and least significant bits and all attributes such as version, variant,
 string and bytes are computed on demand instead of inlined at initialization.
+* 0.0.5:  Convert the class initializer to a constructor with the intention of making it unshared when the 
+capability exists in ceylon-spec.  Ensure that the bytes attribute returns the correct bytes.  Import 
+com.vasileff.ceylon.random.api and use it instead of Java's secureRandom for random number generation for
+random UUIDs.

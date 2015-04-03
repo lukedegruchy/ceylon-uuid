@@ -6,12 +6,14 @@ import ceylon.io.charset {
     utf8
 }
 
-import java.lang {
-    ByteArray
+import com.vasileff.ceylon.random.api {
+    LCGRandom
 }
+
 import java.security {
-    MessageDigest{messageDigestInstance=getInstance},
-    SecureRandom
+    MessageDigest {
+        messageDigestInstance=getInstance
+    }
 }
 
 shared {Byte*} stringToBytes(String text) 
@@ -29,8 +31,7 @@ shared [Byte+] integerToBytesNoZeros(Integer integer) {
 
 shared [Byte+] integerToBytes(Integer integer) 
     => [for (index in numberOfBytesInInteger..1) 
-            integer.rightLogicalShift((index-1) * numberOfBytesInInteger).byte];
-
+            integer.rightLogicalShift((index - 1) * numberOfBytesInInteger).byte];
 
 // TODO: Use a native Ceylon md5 function when it's ready
 shared Byte[] md5({Byte+} namedBytes)
@@ -43,14 +44,11 @@ shared Byte[] sha1({Byte+} namedBytes)
 shared Byte[] encodeBytes({Byte+} namedBytes,MessageDigest messageDigest)
     => messageDigest.digest(javaByteArray(Array(namedBytes))).byteArray.sequence();
 
-// TODO: Use jvasileff's ceylon-random instead when it's ready
-shared {Byte+} randomData(Integer size) 
-    => javaRandomData(size);
-
-{Byte+} javaRandomData(Integer size) {
-    ByteArray data = ByteArray(size);
-    SecureRandom().nextBytes(data);
+shared {Byte+} randomData(Integer size) {
+    Byte[] randomData = let (random=LCGRandom()) 
+        (0:size).collect((thing) => random.nextByte());
     
-    assert( nonempty dataSequence=data.byteArray.sequence());
-    return dataSequence; 
+    assert(nonempty randomData);
+    
+    return randomData;
 }
