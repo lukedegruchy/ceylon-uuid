@@ -11,7 +11,7 @@ The current implementation of the UUID class contains the following attributes:
 * mostSignificantBits
 * leastSignificantBits
 
-Current version: 0.0.5
+Current version: 0.0.6
 
 Version history:
 
@@ -29,3 +29,4 @@ string and bytes are computed on demand instead of inlined at initialization.
 capability exists in ceylon-spec.  Ensure that the bytes attribute returns the correct bytes.  Import 
 com.vasileff.ceylon.random.api and use it instead of Java's secureRandom for random number generation for
 random UUIDs.
+* 0.0.6: Add herd.chayote module and use its functions in place of any duplicate functions in this project.

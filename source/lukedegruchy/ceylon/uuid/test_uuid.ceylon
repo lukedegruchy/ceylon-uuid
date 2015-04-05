@@ -141,7 +141,7 @@ void testUuid3Md5() {
 }
 
 test 
-void testuuid4Random() {
+void testUuid4Random() {
     void assertMe() {
         UUID uUID = uuid4Random();
         

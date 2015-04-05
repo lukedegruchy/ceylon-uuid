@@ -19,20 +19,6 @@ import java.security {
 shared {Byte*} stringToBytes(String text) 
     => createJavaByteArray(utf8.encode(text)).byteArray.sequence(); 
 
-Integer numberOfBytesInInteger = 8;
-
-shared [Byte+] integerToBytesNoZeros(Integer integer) {
-    value bytes = integerToBytes(integer).filter(not<Byte>((byte) => byte == 0.byte)).sequence();
-    
-    assert(nonempty bytes);
-    
-    return bytes;
-}
-
-shared [Byte+] integerToBytes(Integer integer) 
-    => [for (index in numberOfBytesInInteger..1) 
-            integer.rightLogicalShift((index - 1) * numberOfBytesInInteger).byte];
-
 // TODO: Use a native Ceylon md5 function when it's ready
 shared Byte[] md5({Byte+} namedBytes)
     => encodeBytes(namedBytes,messageDigestInstance("MD5"));

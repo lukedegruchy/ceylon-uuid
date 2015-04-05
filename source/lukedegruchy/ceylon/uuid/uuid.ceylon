@@ -1,17 +1,23 @@
-import lukedegruchy.ceylon.uuid.utility {
+import herd.chayote.bytes {
+    integerToBytesNoZeros
+}
+import herd.chayote.object_helpers {
     hashes,
-    formatAndPadHex,
+    equalsWithMulitple
+}
+
+import lukedegruchy.ceylon.uuid.utility {
     randomData,
-    parseHex,
     md5,
     stringToBytes,
     sha1,
-    integerToBytesNoZeros
+    parseHex,
+    formatAndPadAsHexNoUnderscores
 }
 
 " An implementation of Universal Unique Identifier (UUID).  See http://tools.ietf.org/html/rfc4122.
-  The current impelementation supports only a JDK backend due to dependencies upon [[java.security::SecureRandom]], and
-  [[java.security::MessageDigest]], to produce random bytes, and to implement MD5/SHA-1 hashing, respectively."
+  The current impelementation supports only a JDK backend due to dependencies upon [[java.security::MessageDigest]], 
+  to produce random bytes, and to implement MD5/SHA-1 hashing, respectively."
 
 // TODO:  More documentation
 
@@ -92,9 +98,7 @@ shared class UUID {
     
     String uuidComponentAsString(Integer valParam, Integer digits, Integer? rightShift=null) {
         Integer uuidComponentInteger = uuidComponentAsInteger(valParam,digits,rightShift);
-
-        assert(exists asHex=formatAndPadHex(uuidComponentInteger,digits));
-        
+        assert(exists asHex=formatAndPadAsHexNoUnderscores(uuidComponentInteger,digits));
         return asHex;
     }
 
@@ -117,7 +121,6 @@ shared class UUID {
                            timeHiVersionBytes, 
                            clockSeqHiVariantBytes, 
                            clockSeqLowBytes, 
-                           //clockSeq,
                            nodeBytes);
     }
 
@@ -126,9 +129,9 @@ shared class UUID {
 
     shared actual Boolean equals(Object other) 
         => if (is UUID other) 
-            then mostSignificantBits == other.mostSignificantBits && 
-                 leastSignificantBits == other.leastSignificantBits
-           else false;
+            then equalsWithMulitple({[mostSignificantBits, other.mostSignificantBits],
+                                     [leastSignificantBits, other.leastSignificantBits]})
+            else false;
 
     shared actual Integer hash 
         => hashes(mostSignificantBits, leastSignificantBits);
