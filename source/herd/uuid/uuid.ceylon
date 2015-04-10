@@ -6,7 +6,7 @@ import herd.chayote.object_helpers {
     equalsWithMulitple
 }
 
-import lukedegruchy.ceylon.uuid.utility {
+import herd.uuid.utility {
     randomData,
     md5,
     stringToBytes,

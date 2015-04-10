@@ -1,5 +1,5 @@
 // TODO:  Documentation
-module lukedegruchy.ceylon.uuid "0.0.6" {
+module herd.uuid "0.0.6" {
     import ceylon.collection "1.1.1";
     import ceylon.interop.java "1.1.1";
     import ceylon.io "1.1.1";
