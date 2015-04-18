@@ -22,10 +22,6 @@ import herd.uuid.utility {
 // TODO:  More documentation
 
 // Top level attributes
-Integer uuidVersion3 = 3;
-Integer uuidVersion4 = 4;
-Integer uuidVersion5 = 5;
-
 Integer expectedUuidComponentSize = 5;
 Integer numberOfUuidBytes = 16;
 
@@ -34,6 +30,20 @@ Integer timeMidExpectedNumChars = 4;
 Integer timeHiVersionExpectedNumChars = 4;
 Integer clockSeqExpectedNumChars = 4;
 Integer nodeExpectedNumChars = 12;
+
+shared abstract class UuidSupportedVersion(shared Integer versionNumber, shared Boolean isRandom) 
+    of uuidVersion3, uuidVersion4, uuidVersion5 {}
+
+shared object uuidVersion3 extends UuidSupportedVersion(3,false) {}
+shared object uuidVersion4 extends UuidSupportedVersion(4,true) {}
+shared object uuidVersion5 extends UuidSupportedVersion(5,false) {}
+
+shared UuidSupportedVersion? determineVersion(Integer versionNumber)
+    => switch(versionNumber)
+        case (3) uuidVersion3
+        case (4) uuidVersion4
+        case (5) uuidVersion5
+        else null;
 
 // TODO: Consider not supporting version 1 or 2 seeing as their limited use and potential leakage of MAC address
 [Integer+] supportedVersions = [1,2,3,4,5];
@@ -57,11 +67,9 @@ shared class UUID {
     Integer leastSignificantBits;
 
     Boolean isAllZeros(Integer mostSignificantBits, Integer leastSignificantBits)
-            => [mostSignificantBits, leastSignificantBits].every((element) => element == 0);
+        => [mostSignificantBits, leastSignificantBits].every((element) => element == 0);
     
-    // TODO:  Make this either sealed or unshared according to the resolution in:
-    // https://github.com/ceylon/ceylon-spec/issues/1210
-    shared new(Integer mostSignificantBits,Integer leastSignificantBits) {
+    sealed shared new(Integer mostSignificantBits,Integer leastSignificantBits) {
         this.mostSignificantBits = mostSignificantBits;
         this.leastSignificantBits = leastSignificantBits;
         
@@ -124,7 +132,14 @@ shared class UUID {
                            nodeBytes);
     }
 
-    shared Integer version => getVersionFromMostSignificantBits(mostSignificantBits);
+    shared UuidSupportedVersion version {
+        Integer versionInt = getVersionFromMostSignificantBits(mostSignificantBits);
+
+        assert(exists version = determineVersion(versionInt));
+         
+        return version;
+    }
+
     shared Integer variant => getVariantFromLeastSignificantBits(leastSignificantBits);
 
     shared actual Boolean equals(Object other) 
@@ -243,9 +258,9 @@ shared UUID uuid5Sha1(String name,UUID? namespace=null)
 
 UUID convertedNamespaceAndName(UUID? namespace, 
                                String name, 
-                               Integer uuidVersion,
+                               UuidSupportedVersion uuidVersion,
                                Byte[] convertBytes({Byte+} bytesToConvert)) {
-    assert([uuidVersion3,uuidVersion5].contains(uuidVersion));
+    assert(! uuidVersion.isRandom);
 
     [Byte+] bytes = 
         bytesFromNamespaceAndName(namespace else blankUuid,name);
@@ -267,7 +282,7 @@ Byte[] convertedBytes({Byte+} bytes, Byte[] convertBytes({Byte+} bytesToConvert)
     return bytes;
 }
 
-UUID? bytesToUuid(Byte[] randomData,Integer uuidVersion) {
+shared UUID? bytesToUuid(Byte[] randomData, UuidSupportedVersion uuidVersion) {
     if (randomData.every((element) => element == 0.byte)) {
         return blankUuid;
     }
@@ -382,8 +397,8 @@ Integer getVersionFromMostSignificantBits(Integer mostSignificantBits)
 Integer getVariantFromLeastSignificantBits(Integer leastSignificantBits) 
     => leastSignificantBits.rightLogicalShift(62);
 
-Byte setVersion(Byte timeHiVersionPart, Integer version)
-    => timeHiVersionPart.and($1111.byte).or(version.leftLogicalShift(4).byte);
+Byte setVersion(Byte timeHiVersionPart, UuidSupportedVersion version)
+    => timeHiVersionPart.and($1111.byte).or(version.versionNumber.leftLogicalShift(4).byte);
 
 Byte setVariant(Byte clockSeqHiVariant)
     => clockSeqHiVariant.and($11_1111.byte).or($1000_0000.byte);

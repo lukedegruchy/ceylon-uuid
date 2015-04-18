@@ -11,22 +11,25 @@ The current implementation of the UUID class contains the following attributes:
 * mostSignificantBits
 * leastSignificantBits
 
-Current version: 0.0.6
+Current version: 0.0.7
 
 Version history:
 
-* 0.0.1: The only functionality implemented is to obtain a UUID from a UUID string 
+- 0.0.1: The only functionality implemented is to obtain a UUID from a UUID string 
 (ex E1303FB5-F085-4D11-A51C-D85DFFC7FE27) and the actual string attribute of the UUID will output this same
 UUID string.
-* 0.0.2: Add functionality to obtain a randomly generated UUID version 4.  
+- 0.0.2: Add functionality to obtain a randomly generated UUID version 4.  
 Also, validate for supported versions and variants.
-* 0.0.3: Add functionality to support version 3 (MD5) and version 5 (SHA-1) UUIDs.  Also, support blank UUID
+- 0.0.3: Add functionality to support version 3 (MD5) and version 5 (SHA-1) UUIDs.  Also, support blank UUID
 (00000000-0000-0000-0000-000000000000), even though the standard doesn't seem to mandate this, this concept
 does seem to be used in practice.
-* 0.0.4: Internal storage is based on most and least significant bits and all attributes such as version, variant,
+- 0.0.4: Internal storage is based on most and least significant bits and all attributes such as version, variant,
 string and bytes are computed on demand instead of inlined at initialization.
-* 0.0.5:  Convert the class initializer to a constructor with the intention of making it unshared when the 
+- 0.0.5:  Convert the class initializer to a constructor with the intention of making it unshared when the 
 capability exists in ceylon-spec.  Ensure that the bytes attribute returns the correct bytes.  Import 
 com.vasileff.ceylon.random.api and use it instead of Java's secureRandom for random number generation for
 random UUIDs.
-* 0.0.6: Add herd.chayote module and use its functions in place of any duplicate functions in this project.
+- 0.0.6: Add herd.chayote module and use its functions in place of any duplicate functions in this project.
+- 0.0.7: Update to herd.chayote 0.0.7.  Change UUID constructor to sealed.  Move last unit test to test module.
+Expose bytesToUuid() as shared.  Introduce type safe version as an enumerated type and use this for all
+operations involving versions.

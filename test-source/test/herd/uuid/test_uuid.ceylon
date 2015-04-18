@@ -4,7 +4,8 @@ import ceylon.test {
     test,
     assertEquals,
     assertNull,
-    assertNotEquals
+    assertNotEquals,
+    assertTrue
 }
 
 import herd.uuid {
@@ -102,7 +103,7 @@ void testUuid3Md5() {
         
         // Ensure algorythm to generate UUID 3 is deterministic
         assertEquals(md5UuidNamespaceFirstTry,md5UuidNamespaceSecondTry);
-        assertEquals(md5UuidNamespaceFirstTry.version, 3);
+        assertEquals(md5UuidNamespaceFirstTry.version, uuidVersion3);
     }
 
     // Note:  The RFC spec says that not matching is with "very high probability", not "always"
@@ -111,7 +112,7 @@ void testUuid3Md5() {
         UUID uuid2 = uuid3Md5(names[1], uuidNamespace);
         
         assertNotEquals(uuid1,uuid2);
-        assertEquals(uuid1.version, 3);
+        assertEquals(uuid1.version, uuidVersion3);
     }
 
     // Note:  The RFC spec says that not matching is with "very high probability", not "always"
@@ -120,7 +121,7 @@ void testUuid3Md5() {
         UUID uuid2 = uuid3Md5(name, uuidNamespaces[1]);
         
         assertNotEquals(uuid1,uuid2);
-        assertEquals(uuid1.version, 3);
+        assertEquals(uuid1.version, uuidVersion3);
     }
 
     String name1 = "md5Name1";
@@ -152,7 +153,7 @@ void testUuid4Random() {
         
         assertEquals(jUUID.string.lowercased, uUID.string.lowercased);
 
-        assertEquals(uUID.version, 4);
+        assertEquals(uUID.version, uuidVersion4);
     }
     
     for(ii in 1..20) {
@@ -168,7 +169,7 @@ void testUuid5Sha1() {
         
         // Ensure algorythm to generate UUID 5 is deterministic
         assertEquals(sha1UuidNamespaceFirstTry,sha1UuidNamespaceSecondTry);
-        assertEquals(sha1UuidNamespaceFirstTry.version, 5);
+        assertEquals(sha1UuidNamespaceFirstTry.version, uuidVersion5);
     }
 
     void assertNotMatchesNames([String,String] names, UUID? uuidNamespace=null) {
@@ -176,7 +177,7 @@ void testUuid5Sha1() {
         UUID sha1Uuid2 = uuid5Sha1(names[1], uuidNamespace);
         
         assertNotEquals(sha1Uuid1,sha1Uuid2);
-        assertEquals(sha1Uuid1.version, 5);
+        assertEquals(sha1Uuid1.version, uuidVersion5);
     }
 
     void assertNotMatchesNamespaces(String name, [UUID?,UUID?] uuidNamespaces) {
@@ -184,7 +185,7 @@ void testUuid5Sha1() {
         UUID sha1Uuid2 = uuid5Sha1(name, uuidNamespaces[1]);
         
         assertNotEquals(sha1Uuid1,sha1Uuid2);
-        assertEquals(sha1Uuid1.version, 5);
+        assertEquals(sha1Uuid1.version, uuidVersion5);
     }
 
     String name1 = "sha1Name1";
@@ -205,4 +206,44 @@ void testUuid5Sha1() {
 
     assertNotMatchesNamespaces(name1,[uuid1,uuid2]);
     assertNotMatchesNamespaces(name2,[null,uuid2]);
+}
+
+test
+void testBytesToUuid() {
+    Byte setVersion(Byte timeHiVersionPart, UuidSupportedVersion version)
+        => timeHiVersionPart.and($1111.byte).or(version.versionNumber.leftLogicalShift(4).byte);
+
+    Byte setVariant(Byte clockSeqHiVariant)
+        => clockSeqHiVariant.and($11_1111.byte).or($1000_0000.byte);
+
+    void assertMe(Byte[] bytes, UuidSupportedVersion version, String expectedUuid) {
+        assert(exists uuid=bytesToUuid(bytes, version));
+        assertEquals(uuid.string.lowercased, expectedUuid.lowercased);
+        
+        if (uuid.isBlankUuid) {
+            assertTrue(bytes.every((element) => element == 0.byte) || bytes.empty);
+        }
+        else {
+            value expectedBytes = 
+                    bytes.span(0, 5)
+                    .withTrailing(setVersion(bytes[6] else 0.byte, version))
+                    .withTrailing(bytes[7])
+                    .withTrailing(setVariant(bytes[8] else 0.byte))
+                    .append(bytes.span(9, 15));
+            
+            assertEquals(uuid.bytes, expectedBytes);
+        }
+        
+    }
+    
+    Byte[] _16Bytes = [#dc,#5a,#99,#15,#5d,#0c,#5b,#09,#64,#d5,#c5,#d6,#62,#9c,#29,#dd ]
+            .map(Integer.byte).sequence();
+    Byte[] zeros = [for (count in 1..16) 0.byte];
+    
+    //TODO:  more bytes to test
+    assertMe(_16Bytes, uuidVersion3, "dc5a9915-5d0c-3b09-a4d5-c5d6629c29dd");
+    assertMe(_16Bytes, uuidVersion4, "dc5a9915-5d0c-4b09-a4d5-c5d6629c29dd");
+    assertMe(_16Bytes, uuidVersion5, "dc5a9915-5d0c-5b09-a4d5-c5d6629c29dd");
+    assertMe([], uuidVersion5, blankUuidString);
+    assertMe(zeros, uuidVersion5, blankUuidString);
 }
