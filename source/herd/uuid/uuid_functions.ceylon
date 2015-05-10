@@ -1,25 +1,10 @@
-import herd.chayote.bytes {
-    integerToBytesNoZeros
-}
-import herd.chayote.object_helpers {
-    hashes,
-    equalsWithMulitple
-}
-
 import herd.uuid.utility {
     randomData,
     md5,
     stringToBytes,
     sha1,
-    parseHex,
-    formatAndPadAsHexNoUnderscores
+    parseHex
 }
-
-" An implementation of Universal Unique Identifier (UUID).  See http://tools.ietf.org/html/rfc4122.
-  The current impelementation supports only a JDK backend due to dependencies upon [[java.security::MessageDigest]], 
-  to produce random bytes, and to implement MD5/SHA-1 hashing, respectively."
-
-// TODO:  More documentation
 
 // Top level attributes
 Integer expectedUuidComponentSize = 5;
@@ -31,143 +16,58 @@ Integer timeHiVersionExpectedNumChars = 4;
 Integer clockSeqExpectedNumChars = 4;
 Integer nodeExpectedNumChars = 12;
 
+"Enumerated type describing the supported UUID versions by the [[UUID]] class."
 shared abstract class UuidSupportedVersion(shared Integer versionNumber, shared Boolean isRandom) 
-    of uuidVersion3, uuidVersion4, uuidVersion5 {}
+    of uuidVersion0, uuidVersion3, uuidVersion4, uuidVersion5 {}
 
+"Version corresponding to blank UUIDs"
+shared object uuidVersion0 extends UuidSupportedVersion(0,false) {}
+
+"Version corresponding to MD5 encoded String and namespace UUIDs"
 shared object uuidVersion3 extends UuidSupportedVersion(3,false) {}
+
+"Version corresponding to randomly generated UUIDs"
 shared object uuidVersion4 extends UuidSupportedVersion(4,true) {}
+
+"Version corresponding to SHA1 encoded String and namespace UUIDs"
 shared object uuidVersion5 extends UuidSupportedVersion(5,false) {}
 
-shared UuidSupportedVersion? determineVersion(Integer versionNumber)
+"Versions 1 and 2 are not supported currently"
+UuidSupportedVersion? determineVersion(Integer versionNumber)
     => switch(versionNumber)
+        case (0) uuidVersion0
         case (3) uuidVersion3
         case (4) uuidVersion4
         case (5) uuidVersion5
         else null;
 
-// TODO: Consider not supporting version 1 or 2 seeing as their limited use and potential leakage of MAC address
-[Integer+] supportedVersions = [1,2,3,4,5];
-Integer supportedVariantBit = 1;
+/*
+ 0 - Reserved, NCS backward compatibility.
+ 2 - DCE variant.
+ 6 Reserved, Microsoft Corporation GUID.
+ 7 Reserved for future definition. 
+ */
+//"Enumerated type describing the supported UUID variants by the [[UUID]] class."
+shared abstract class UuidSupportedVariant(Integer variantNumber) 
+    of uuidVariant0, uuidVariant2, uuidVariant6, uuidVariant7 {}
 
-// TODO: Take into account other variants such as reserved_microsoft or reserved_future
-[Integer] supportedVariants = [2];
+object uuidVariant0 extends UuidSupportedVariant(0) {}
+object uuidVariant2 extends UuidSupportedVariant(2) {}
+object uuidVariant6 extends UuidSupportedVariant(6) {}
+object uuidVariant7 extends UuidSupportedVariant(7) {}
 
-// TODO:  consider better handling of blank UUID logic:   sublcass UUID and add hooks??
+UuidSupportedVariant? determineVariant(Integer variantNumber)
+    => switch(variantNumber)
+        case (2) uuidVariant2
+        else null;
 
 // TODO:  consider use of type classes to distinguish among different types of integers
 
 "A UUID corresponding to 00000000-0000-0000-0000-000000000000"
 shared UUID blankUuid = UUID(0,0);
 
-"A UUID string corresponding to UUID(0,0,0,0,0,0)"
+"A UUID string corresponding to UUID(0,0)"
 shared String blankUuidString = "00000000-0000-0000-0000-000000000000";
-
-shared class UUID {
-    Integer mostSignificantBits;
-    Integer leastSignificantBits;
-
-    Boolean isAllZeros(Integer mostSignificantBits, Integer leastSignificantBits)
-        => [mostSignificantBits, leastSignificantBits].every((element) => element == 0);
-    
-    sealed shared new(Integer mostSignificantBits,Integer leastSignificantBits) {
-        this.mostSignificantBits = mostSignificantBits;
-        this.leastSignificantBits = leastSignificantBits;
-        
-        Integer? getValidVersion()
-                => let(innerVersion = getVersionFromMostSignificantBits(mostSignificantBits))
-        if (supportedVersions.contains(innerVersion) || 
-            isAllZeros(this.mostSignificantBits,this.leastSignificantBits))
-        then innerVersion
-        else null;
-        
-        Integer? getValidVariant()
-                => let(innerVariant = getVariantFromLeastSignificantBits(this.leastSignificantBits))
-        if (supportedVariants.contains(innerVariant) || 
-            isAllZeros(this.mostSignificantBits,this.leastSignificantBits))
-        then innerVariant
-        else null;
-        
-        void validate() {
-            assert(exists x=getValidVersion());
-            assert(exists y=getValidVariant());
-        }
-        
-        validate();
-    }
-
-    Byte[] uuidComponentAsBytes(Integer valParam, Integer digits, Integer? rightShift=null) 
-        => integerToBytesNoZeros(uuidComponentAsInteger(valParam, digits, rightShift));
-    
-    Integer uuidComponentAsInteger(Integer valParam, Integer digits, Integer? rightShift=null) 
-        => let(val = if (exists rightShift) 
-                        then valParam.rightLogicalShift(rightShift) 
-                        else valParam )
-           val.and((16 ^ digits) -1);
-    
-    String uuidComponentAsString(Integer valParam, Integer digits, Integer? rightShift=null) {
-        Integer uuidComponentInteger = uuidComponentAsInteger(valParam,digits,rightShift);
-        assert(exists asHex=formatAndPadAsHexNoUnderscores(uuidComponentInteger,digits));
-        return asHex;
-    }
-
-    shared Boolean isBlankUuid => isAllZeros(mostSignificantBits, leastSignificantBits);
-
-    shared Byte[] bytes {
-        if (isBlankUuid) {
-            return [];
-        }
-
-        Byte[] timeLowBytes = uuidComponentAsBytes(mostSignificantBits, 8, 32);
-        Byte[] timeMidBytes = uuidComponentAsBytes(mostSignificantBits, 4, 16);
-        Byte[] timeHiVersionBytes = uuidComponentAsBytes(mostSignificantBits, 4);
-        Byte[] clockSeqHiVariantBytes = uuidComponentAsBytes(leastSignificantBits, 2, 56);
-        Byte[] clockSeqLowBytes = uuidComponentAsBytes(leastSignificantBits, 2, 48);
-        Byte[] nodeBytes = uuidComponentAsBytes(leastSignificantBits, 12);
-
-        return concatenate(timeLowBytes, 
-                           timeMidBytes, 
-                           timeHiVersionBytes, 
-                           clockSeqHiVariantBytes, 
-                           clockSeqLowBytes, 
-                           nodeBytes);
-    }
-
-    shared UuidSupportedVersion version {
-        Integer versionInt = getVersionFromMostSignificantBits(mostSignificantBits);
-
-        assert(exists version = determineVersion(versionInt));
-         
-        return version;
-    }
-
-    shared Integer variant => getVariantFromLeastSignificantBits(leastSignificantBits);
-
-    shared actual Boolean equals(Object other) 
-        => if (is UUID other) 
-            then equalsWithMulitple({[mostSignificantBits, other.mostSignificantBits],
-                                     [leastSignificantBits, other.leastSignificantBits]})
-            else false;
-
-    shared actual Integer hash 
-        => hashes(mostSignificantBits, leastSignificantBits);
-
-    // TODO:  More documentation
-    "Obtain the [[String]] representation of this [[UUID]].  Example: c7761fd5-ee11-46ce-a0cc-ff8f8fb72a23"
-    shared actual String string {
-        if (isBlankUuid) {
-            return blankUuidString;
-        }
-
-        String timeLo = uuidComponentAsString(mostSignificantBits, 8, 32);
-        String timeMid = uuidComponentAsString(mostSignificantBits, 4, 16);
-        String timeHiVersion = uuidComponentAsString(mostSignificantBits, 4);
-        String clockSeqHiVariant = uuidComponentAsString(leastSignificantBits, 2, 56);
-        String clockSeqLow = uuidComponentAsString(leastSignificantBits, 2, 48);
-        String node = uuidComponentAsString(leastSignificantBits, 12);
-
-        return "-".join([timeLo, timeMid, timeHiVersion, clockSeqHiVariant + clockSeqLow, node]);
-    }
-}
 
 // TODO:  More documentation
 "Obtain a UUID from a UUID string.  If the UUID string is malformed or incorrect in any way including version
@@ -282,6 +182,7 @@ Byte[] convertedBytes({Byte+} bytes, Byte[] convertBytes({Byte+} bytesToConvert)
     return bytes;
 }
 
+// TODO:  Documentation
 shared UUID? bytesToUuid(Byte[] randomData, UuidSupportedVersion uuidVersion) {
     if (randomData.every((element) => element == 0.byte)) {
         return blankUuid;
@@ -374,15 +275,15 @@ UUID fromComponents(Integer timeLow,
 
 Integer? getValidVersion(Integer timeHiVersion)
     => let (actualVersion = getVersion(timeHiVersion))
-       if (supportedVersions.contains(actualVersion)) 
+       if (exists determinedVersion=determineVersion(actualVersion)) 
            then actualVersion
            else null;
 
 Integer? getValidVariant(Integer clockSeqHiVariant)
         // First two bits of clockSeqHiVariant
-    => let(variantTwoBits = getVariant(clockSeqHiVariant))
-       if (supportedVariants.contains(variantTwoBits))
-            then variantTwoBits
+    => let(actualVariant = getVariant(clockSeqHiVariant))
+       if (exists determinedVariant=determineVariant(actualVariant))
+            then actualVariant
             else null;
 
 Integer getVersion(Integer timeHiVersion)
@@ -392,7 +293,9 @@ Integer getVariant(Integer clockSeqHiVariant)
     => clockSeqHiVariant.rightLogicalShift(6);
 
 Integer getVersionFromMostSignificantBits(Integer mostSignificantBits) 
-    => mostSignificantBits.rightArithmeticShift(12).and(#f);
+    => if (mostSignificantBits == 0) 
+        then 0 
+        else mostSignificantBits.rightArithmeticShift(12).and(#f);
 
 Integer getVariantFromLeastSignificantBits(Integer leastSignificantBits) 
     => leastSignificantBits.rightLogicalShift(62);

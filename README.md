@@ -12,6 +12,7 @@ The current implementation of the UUID class contains the following attributes:
 * leastSignificantBits
 
 Current version: 0.0.7
+Current version: 0.0.8
 
 Version history:
 
@@ -33,3 +34,5 @@ random UUIDs.
 - 0.0.7: Update to herd.chayote 0.0.7.  Change UUID constructor to sealed.  Move last unit test to test module.
 Expose bytesToUuid() as shared.  Introduce type safe version as an enumerated type and use this for all
 operations involving versions.
+- 0.0.8: Add conversion functions from/to Java UUIDs.  Refactor into separate source files for the UUID class and 
+functions/constants.  Add a TypedUUID based on Chayote TypedClass.
