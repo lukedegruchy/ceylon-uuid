@@ -48,7 +48,7 @@ UuidSupportedVersion? determineVersion(Integer versionNumber)
  7 Reserved for future definition. 
  */
 //"Enumerated type describing the supported UUID variants by the [[UUID]] class."
-shared abstract class UuidSupportedVariant(Integer variantNumber) 
+shared abstract class UuidSupportedVariant(shared Integer variantNumber) 
     of uuidVariant0, uuidVariant2, uuidVariant6, uuidVariant7 {}
 
 object uuidVariant0 extends UuidSupportedVariant(0) {}
@@ -58,6 +58,7 @@ object uuidVariant7 extends UuidSupportedVariant(7) {}
 
 UuidSupportedVariant? determineVariant(Integer variantNumber)
     => switch(variantNumber)
+        case (0) uuidVariant0
         case (2) uuidVariant2
         else null;
 

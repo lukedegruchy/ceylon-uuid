@@ -11,6 +11,7 @@
   
   Also, there is a [[TypedUUID]] class that subclasses Chayote's TypedClass."
 // TODO:  More Documentation
+native("jvm")
 module herd.uuid "0.0.8" {
     import ceylon.collection "1.1.1";
     import ceylon.interop.java "1.1.1";
