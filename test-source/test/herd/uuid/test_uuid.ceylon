@@ -224,13 +224,14 @@ void testBytesToUuid() {
             assertTrue(bytes.every((element) => element == 0.byte) || bytes.empty);
         }
         else {
+            
             value expectedBytes = 
                     bytes.span(0, 5)
                     .withTrailing(setVersion(bytes[6] else 0.byte, version))
                     .withTrailing(bytes[7])
                     .withTrailing(setVariant(bytes[8] else 0.byte))
                     .append(bytes.span(9, 15));
-            
+
             assertEquals(uuid.bytes, expectedBytes);
         }
         

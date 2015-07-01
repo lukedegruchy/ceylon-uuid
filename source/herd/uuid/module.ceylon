@@ -11,12 +11,15 @@
   
   Also, there is a [[TypedUUID]] class that subclasses Chayote's TypedClass."
 // TODO:  More Documentation
+// TODO:  Support JavaScript runtime once native SHA1 and MD5 support is available
+// TODO:  Start logging bugs/features in GitHub project
 native("jvm")
-module herd.uuid "0.0.8" {
+module herd.uuid "0.0.9" {
     import ceylon.collection "1.1.1";
     import ceylon.interop.java "1.1.1";
     import ceylon.io "1.1.1";
     import com.vasileff.ceylon.random.api "0.0.4";
-    shared import herd.chayote "0.0.9";
+    shared import com.vasileff.ceylon.xmath "0.0.1";
+    shared import herd.chayote "0.0.10";
     shared import java.base "8";
 }

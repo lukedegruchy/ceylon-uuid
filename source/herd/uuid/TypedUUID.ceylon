@@ -1,4 +1,4 @@
-import herd.chayote.value_classes {
+import herd.chayote.type_classes {
     TypedClass
 }
 

@@ -11,8 +11,7 @@ The current implementation of the UUID class contains the following attributes:
 * mostSignificantBits
 * leastSignificantBits
 
-Current version: 0.0.7
-Current version: 0.0.8
+Current version: 0.0.9
 
 Version history:
 
@@ -36,3 +35,4 @@ Expose bytesToUuid() as shared.  Introduce type safe version as an enumerated ty
 operations involving versions.
 - 0.0.8: Add conversion functions from/to Java UUIDs.  Refactor into separate source files for the UUID class and 
 functions/constants.  Add a TypedUUID based on Chayote TypedClass.
+- 0.0.9: Replace all Integer uses that involve collections of Bytes or bits with Ceylon xmath Long (aliased as XLong).  Update to chayote 0.0.10.

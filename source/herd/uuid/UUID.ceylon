@@ -1,12 +1,16 @@
-import herd.chayote.bytes {
-    integerToBytesNoZeros
+import com.vasileff.ceylon.xmath.long {
+    XLong=Long,
+    longNumber,
+    zero
 }
+
 import herd.chayote.object_helpers {
     equalsWithMulitple,
     hashes
 }
 import herd.uuid.utility {
-    formatAndPadAsHexNoUnderscores
+    formatAndPadAsHexNoUnderscoresXLong,
+    xLongToBytesNoLeadingZeros
 }
 
 " An implementation of Universal Unique Identifier (UUID).  See http://tools.ietf.org/html/rfc4122.
@@ -21,15 +25,15 @@ import herd.uuid.utility {
 // TODO:  consider better handling of blank UUID logic:   subclass UUID and add hooks??
 
 shared class UUID {
-    Integer mostSignificantBits;
-    Integer leastSignificantBits;
+    XLong mostSignificantBits;
+    XLong leastSignificantBits;
 
-    Boolean isAllZeros(Integer mostSignificantBits, Integer leastSignificantBits)
-        => [mostSignificantBits, leastSignificantBits].every((element) => element == 0);
+    Boolean isAllZeros(XLong mostSignificantBits, XLong leastSignificantBits)
+        => [mostSignificantBits, leastSignificantBits].every((element) => element == zero);
     
     "This constructor is not meant to be exposed outside of the module.  Clients should invoke
      either of the top-level functions to obtain a UUID."
-    sealed shared new(Integer mostSignificantBits,Integer leastSignificantBits) {
+    sealed shared new(XLong mostSignificantBits,XLong leastSignificantBits) {
         this.mostSignificantBits = mostSignificantBits;
         this.leastSignificantBits = leastSignificantBits;
 
@@ -60,18 +64,18 @@ shared class UUID {
         }
     }
 
-    Byte[] uuidComponentAsBytes(Integer valParam, Integer digits, Integer? rightShift=null) 
-        => integerToBytesNoZeros(uuidComponentAsInteger(valParam, digits, rightShift));
+    Byte[] uuidComponentAsBytes(XLong valParam, Integer digits, Integer? rightShift=null) 
+        => xLongToBytesNoLeadingZeros(uuidComponentAsXLong(valParam, digits, rightShift));
     
-    Integer uuidComponentAsInteger(Integer valParam, Integer digits, Integer? rightShift=null) 
+    XLong uuidComponentAsXLong(XLong valParam, Integer digits, Integer? rightShift=null) 
         => let(val = if (exists rightShift) 
                         then valParam.rightLogicalShift(rightShift) 
                         else valParam )
-           val.and((16 ^ digits) -1);
+           val.and(longNumber((16 ^ digits) -1));
     
-    String uuidComponentAsString(Integer valParam, Integer digits, Integer? rightShift=null) {
-        Integer uuidComponentInteger = uuidComponentAsInteger(valParam,digits,rightShift);
-        assert(exists asHex=formatAndPadAsHexNoUnderscores(uuidComponentInteger,digits));
+    String uuidComponentAsString(XLong valParam, Integer digits, Integer? rightShift=null) {
+        XLong uuidComponentXLong = uuidComponentAsXLong(valParam,digits,rightShift);
+        assert(exists asHex=formatAndPadAsHexNoUnderscoresXLong(uuidComponentXLong,digits));
         return asHex;
     }
 

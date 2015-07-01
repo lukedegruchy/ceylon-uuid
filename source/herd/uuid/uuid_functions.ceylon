@@ -1,9 +1,16 @@
+import com.vasileff.ceylon.xmath.long {
+    XLong=Long,
+    zero,
+    longNumber
+}
+
 import herd.uuid.utility {
     randomData,
     md5,
     stringToBytes,
     sha1,
-    parseHex
+    parseHexXLong,
+    byteToXLong
 }
 
 // Top level attributes
@@ -18,7 +25,7 @@ Integer nodeExpectedNumChars = 12;
 
 "Enumerated type describing the supported UUID versions by the [[UUID]] class."
 shared abstract class UuidSupportedVersion(shared Integer versionNumber, shared Boolean isRandom) 
-    of uuidVersion0, uuidVersion3, uuidVersion4, uuidVersion5 {}
+    of uuidVersion0 | uuidVersion3 | uuidVersion4 | uuidVersion5 {}
 
 "Version corresponding to blank UUIDs"
 shared object uuidVersion0 extends UuidSupportedVersion(0,false) {}
@@ -49,7 +56,7 @@ UuidSupportedVersion? determineVersion(Integer versionNumber)
  */
 //"Enumerated type describing the supported UUID variants by the [[UUID]] class."
 shared abstract class UuidSupportedVariant(shared Integer variantNumber) 
-    of uuidVariant0, uuidVariant2, uuidVariant6, uuidVariant7 {}
+    of uuidVariant0 | uuidVariant2 | uuidVariant6 | uuidVariant7 {}
 
 object uuidVariant0 extends UuidSupportedVariant(0) {}
 object uuidVariant2 extends UuidSupportedVariant(2) {}
@@ -65,7 +72,7 @@ UuidSupportedVariant? determineVariant(Integer variantNumber)
 // TODO:  consider use of type classes to distinguish among different types of integers
 
 "A UUID corresponding to 00000000-0000-0000-0000-000000000000"
-shared UUID blankUuid = UUID(0,0);
+shared UUID blankUuid = UUID(zero,zero);
 
 "A UUID string corresponding to UUID(0,0)"
 shared String blankUuidString = "00000000-0000-0000-0000-000000000000";
@@ -96,16 +103,16 @@ shared UUID? fromString(String uuidString) {
         clockSeqString.size == clockSeqExpectedNumChars,
         nodeString.size == nodeExpectedNumChars) {
         
-        Integer? timeLow = parseHex(timeLowString);
-        Integer? timeMid = parseHex(timeMidString);
-        Integer? timeHiVersion = parseHex(timeHiVersionString);
-        Integer? clockSeq = parseHex(clockSeqString);
-        Integer? node = parseHex(nodeString);
+        XLong? timeLow = parseHexXLong(timeLowString);
+        XLong? timeMid = parseHexXLong(timeMidString);
+        XLong? timeHiVersion = parseHexXLong(timeHiVersionString);
+        XLong? clockSeq = parseHexXLong(clockSeqString);
+        XLong? node = parseHexXLong(nodeString);
         
         // Support supplied blank UUID
-        Integer? getVersionOrZero(Integer timeHiVersion)
+        Integer? getVersionOrZero(XLong timeHiVersion)
             => if (getVersion(timeHiVersion) == 0) then 0 else getValidVersion(timeHiVersion);
-        Integer? getVariantOrZero(Integer clockSeqHiVariant)
+        Integer? getVariantOrZero(XLong clockSeqHiVariant)
             => if (getVariant(clockSeqHiVariant) == 0) then 0 else getValidVariant(clockSeqHiVariant);
         
         if (exists timeLow, 
@@ -114,8 +121,8 @@ shared UUID? fromString(String uuidString) {
             exists clockSeq, 
             exists node,
             exists version = getVersionOrZero(timeHiVersion)) {
-            Integer? clockSeqHiVariant = clockSeq.rightLogicalShift(8);
-            Integer? clockSeqLow = clockSeq.and(#ff);
+            XLong? clockSeqHiVariant = clockSeq.rightLogicalShift(8);
+            XLong? clockSeqLow = clockSeq.and(longNumber(#ff));
             
             if (exists clockSeqHiVariant, 
                 exists clockSeqLow,
@@ -206,31 +213,32 @@ shared UUID? bytesToUuid(Byte[] randomData, UuidSupportedVersion uuidVersion) {
         exists byte15=randomData[14],
         exists byte16=randomData[15]) {
 
-        Integer timeLow = 
-            byte1.unsigned.leftLogicalShift(24)
-                .or(byte2.unsigned.leftLogicalShift(16)
-                .or(byte3.unsigned.leftLogicalShift(8)))
-                .or(byte4.unsigned);
+        XLong timeLow = 
+            byteToXLong(byte1).leftLogicalShift(24)
+                .or(byteToXLong(byte2).leftLogicalShift(16)
+                .or(byteToXLong(byte3).leftLogicalShift(8)))
+                .or(byteToXLong(byte4));
 
-        Integer timeMid = 
-            byte5.unsigned.leftLogicalShift(8).or(byte6.unsigned);
+        // TODO:  Ask John about Byte to XLong
+        XLong timeMid = 
+            byteToXLong(byte5).leftLogicalShift(8).or(byteToXLong(byte6));
                 
-        Integer timeHiVersion =
-            setVersion(byte7,uuidVersion).unsigned.leftLogicalShift(8).or(byte8.unsigned);
+        XLong timeHiVersion =
+            byteToXLong(setVersion(byte7,uuidVersion)).leftLogicalShift(8).or(byteToXLong(byte8));
         
-        Integer clockSeqHiVariant = setVariant(byte9).unsigned;
-        Integer clockSeqLow = byte10.unsigned;
-        Integer node = 
-            byte11.unsigned.leftLogicalShift(40)
-                .or(byte12.unsigned.leftLogicalShift(32))
-                .or(byte13.unsigned.leftLogicalShift(24)
-                .or(byte14.unsigned.leftLogicalShift(16)))
-                .or(byte15.unsigned.leftLogicalShift(8))
-                .or(byte16.unsigned);
+        XLong clockSeqHiVariant = byteToXLong(setVariant(byte9));
+        XLong clockSeqLow = byteToXLong(byte10);
+        XLong node = 
+            byteToXLong(byte11).leftLogicalShift(40)
+                .or(byteToXLong(byte12).leftLogicalShift(32))
+                .or(byteToXLong(byte13).leftLogicalShift(24)
+                .or(byteToXLong(byte14).leftLogicalShift(16)))
+                .or(byteToXLong(byte15).leftLogicalShift(8))
+                .or(byteToXLong(byte16));
 
         return fromComponents { timeLow = timeLow; 
-                                timeMid = timeMid; 
                                 timeHiVersion = timeHiVersion; 
+                                timeMid = timeMid; 
                                 clockSeqHiVariant = clockSeqHiVariant; 
                                 clockSeqLow = clockSeqLow; 
                                 node = node; };
@@ -239,67 +247,71 @@ shared UUID? bytesToUuid(Byte[] randomData, UuidSupportedVersion uuidVersion) {
     return null;
 }
 
-UUID fromComponents(Integer timeLow, 
-                    Integer timeMid,
-                    Integer timeHiVersion,
-                    Integer clockSeqHiVariant,
-                    Integer clockSeqLow,
-                    Integer node) {
-    Integer toMostBits(Integer timeLow, Integer timeMid, Integer timeHiVersion) {
-        Integer shift32MostOne = timeLow.leftLogicalShift(32);
+UUID fromComponents(XLong timeLow, 
+                    XLong timeMid,
+                    XLong timeHiVersion,
+                    XLong clockSeqHiVariant,
+                    XLong clockSeqLow,
+                    XLong node) {
+    XLong toMostBits(XLong timeLow, XLong timeMid, XLong timeHiVersion) {
+        XLong shift32MostOne = timeLow.leftLogicalShift(32);
         
-        Integer shift16MostTwo = timeMid.leftLogicalShift(16);
+        XLong shift16MostTwo = timeMid.leftLogicalShift(16);
         
-        Integer mostOneTwoThree = shift32MostOne.or(shift16MostTwo).or(timeHiVersion);
+        XLong mostOneTwoThree = shift32MostOne.or(shift16MostTwo).or(timeHiVersion);
         
         return mostOneTwoThree;
     }
     
-    Integer toLeastBits(Integer clockSeqHiVariant, Integer clockSeqLow, Integer node) {
-        Integer shift48ClockSeqHiVariant = clockSeqHiVariant.leftLogicalShift(56);
+    XLong toLeastBits(XLong clockSeqHiVariant, XLong clockSeqLow, XLong node) {
+        XLong shift48ClockSeqHiVariant = clockSeqHiVariant.leftLogicalShift(56);
         
-        Integer shift40ClockSeqLow = clockSeqLow.leftLogicalShift(48);
+        XLong shift40ClockSeqLow = clockSeqLow.leftLogicalShift(48);
         
-        Integer clockSeq = shift48ClockSeqHiVariant.or(shift40ClockSeqLow);
+        XLong clockSeq = shift48ClockSeqHiVariant.or(shift40ClockSeqLow);
         
-        Integer clockSeqOrNode = clockSeq.or(node);
+        XLong clockSeqOrNode = clockSeq.or(node);
         
         return clockSeqOrNode;
     }
     
-    Integer mostSignificantBits = toMostBits(timeLow, timeMid, timeHiVersion);
-    Integer leastSignificantBits = toLeastBits(clockSeqHiVariant, clockSeqLow, node);
+    XLong mostSignificantBits = toMostBits(timeLow, timeMid, timeHiVersion);
+    XLong leastSignificantBits = toLeastBits(clockSeqHiVariant, clockSeqLow, node);
     
     return UUID { mostSignificantBits = mostSignificantBits; 
                   leastSignificantBits = leastSignificantBits; };
 }
 
-Integer? getValidVersion(Integer timeHiVersion)
+Integer? getValidVersion(XLong timeHiVersion)
     => let (actualVersion = getVersion(timeHiVersion))
        if (exists determinedVersion=determineVersion(actualVersion)) 
            then actualVersion
            else null;
 
-Integer? getValidVariant(Integer clockSeqHiVariant)
+Integer? getValidVariant(XLong clockSeqHiVariant)
         // First two bits of clockSeqHiVariant
     => let(actualVariant = getVariant(clockSeqHiVariant))
        if (exists determinedVariant=determineVariant(actualVariant))
             then actualVariant
             else null;
 
-Integer getVersion(Integer timeHiVersion)
-    =>  timeHiVersion.rightLogicalShift(12);
+// TODO:  Handle overflow javascript vs. jvm? as optional?
+Integer getVersion(XLong timeHiVersion)
+    =>  timeHiVersion.rightLogicalShift(12).preciseInteger;
 
-Integer getVariant(Integer clockSeqHiVariant)
-    => clockSeqHiVariant.rightLogicalShift(6);
+// TODO:  Handle overflow javascript vs. jvm? as optional?
+Integer getVariant(XLong clockSeqHiVariant)
+    => clockSeqHiVariant.rightLogicalShift(6).preciseInteger;
 
-Integer getVersionFromMostSignificantBits(Integer mostSignificantBits) 
+// TODO:  Handle overflow javascript vs. jvm? as optional?
+Integer getVersionFromMostSignificantBits(XLong mostSignificantBits) 
     => if (mostSignificantBits == 0) 
         then 0 
-        else mostSignificantBits.rightArithmeticShift(12).and(#f);
+        else mostSignificantBits.rightArithmeticShift(12).and(longNumber(#f)).preciseInteger;
 
-Integer getVariantFromLeastSignificantBits(Integer leastSignificantBits) 
-    => leastSignificantBits.rightLogicalShift(62);
+// TODO:  Handle overflow javascript vs. jvm? as optional?
+Integer getVariantFromLeastSignificantBits(XLong leastSignificantBits) 
+    => leastSignificantBits.rightLogicalShift(62).preciseInteger;
 
 Byte setVersion(Byte timeHiVersionPart, UuidSupportedVersion version)
     => timeHiVersionPart.and($1111.byte).or(version.versionNumber.leftLogicalShift(4).byte);

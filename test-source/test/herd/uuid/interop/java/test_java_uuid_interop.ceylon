@@ -19,16 +19,27 @@ import java.util {
 
 test
 void testToJavaUuid() {
-    value uuid = uuid4Random();
-    value javaUuid = toJavaUuid(uuid);
-    
-    assertEquals(javaUuid.string, uuid.string);
+    void assertMe() {
+        value uuid = uuid4Random();
+        value javaUuid = toJavaUuid(uuid);
+        
+        assertEquals(javaUuid.string, uuid.string);
+    }
+
+    for(ii in 1..20) {
+        assertMe();
+    }
 }
 
 test
 void testToUuid() {
-    value javaUuid = randomUUID();
-    value uuid = toUuid(javaUuid);
-    
-    assertEquals(uuid.string, javaUuid.string);
+    void assertMe() {
+        value javaUuid = randomUUID();
+        value uuid = toUuid(javaUuid);
+
+        assertEquals(uuid.string, javaUuid.string);
+    }
+    for(ii in 1..20) {
+        assertMe();
+    }
 }
