@@ -1,3 +1,7 @@
+import com.vasileff.ceylon.xmath.long {
+    longNumber
+}
+
 import herd.uuid {
     UUID
 }
@@ -10,20 +14,17 @@ import java.util {
         jFromString=fromString
     }
 }
-import com.vasileff.ceylon.xmath.long {
-    longNumber
-}
 
-// TODO:  Optimize this  might need to expost most and least signficant bits
-// TODO:  Documentation
+// TODO:  Optimize this  might need to expose most and least signficant bits
+"Convert a Ceylon UUID to a Java [UUID]."
 shared JUUID toJavaUuid(UUID uuid) => jFromString(uuid.string);
 
 "Convert a Java UUID to a Ceylon [UUID]."
 shared UUID toUuid(JUUID jUuid) {
-    value uuid = fromMostAndLeastSignficantBits(longNumber(jUuid.mostSignificantBits), 
+    value uuid = fromMostAndLeastSignficantBits(longNumber(jUuid.mostSignificantBits),
                                                 longNumber(jUuid.leastSignificantBits));
-    
+
     assert(exists uuid);
-    
+
     return uuid;
 }
