@@ -37,6 +37,7 @@ module herd.uuid "0.0.10" {
     import ceylon.interop.java "1.2.0";
     import ceylon.io "1.2.0";
     import ceylon.test "1.2.0";
+    import com.vasileff.ceylon.random.api "0.0.5";
     shared import com.vasileff.ceylon.xmath "0.0.1";
     shared import herd.chayote "0.0.12";
     shared import java.base "8";

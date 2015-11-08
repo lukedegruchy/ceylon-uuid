@@ -6,19 +6,18 @@ import ceylon.io.charset {
     utf8
 }
 
+import com.vasileff.ceylon.random.api {
+    LCGRandom
+}
 import com.vasileff.ceylon.xmath.long {
     longNumber,
     XLong=Long
 }
 
-import java.lang {
-    ByteArray
-}
 import java.security {
     MessageDigest {
         messageDigestInstance=getInstance
-    },
-    SecureRandom
+    }
 }
 
 shared {Byte*} stringToBytes(String text)
@@ -35,16 +34,13 @@ shared Byte[] sha1({Byte+} namedBytes)
 shared Byte[] encodeBytes({Byte+} namedBytes,MessageDigest messageDigest)
     => messageDigest.digest(javaByteArray(Array(namedBytes))).byteArray.sequence();
 
-shared {Byte+} randomData(Integer size)
-    => javaRandomData(size);
+shared {Byte+} randomData(Integer size) {
+    Byte[] randomData = let (random=LCGRandom())
+    (0:size).collect((thing) => random.nextByte());
 
-{Byte+} javaRandomData(Integer size) {
-    ByteArray data = ByteArray(size);
-    SecureRandom().nextBytes(data);
+    assert(nonempty randomData);
 
-    assert( nonempty dataSequence=data.byteArray.sequence());
-
-    return dataSequence;
+    return randomData;
 }
 
 shared XLong byteToLong(Byte byte) => longNumber(byte.unsigned);
