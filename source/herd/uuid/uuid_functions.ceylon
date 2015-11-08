@@ -27,22 +27,21 @@ Integer nodeExpectedNumChars = 12;
  Versions 1 and 2 are not supported currently."
 shared class UuidSupportedVersion
         of uuidVersion3 | uuidVersion4 | uuidVersion5 {
+    "The [[Integer]] corresponding to the [[UUID]] version."
     shared Integer versionNumber;
-    shared Boolean isRandom;
 
-    abstract new named(Integer pVersionNumber, Boolean pIsRandom) {
+    abstract new named(Integer pVersionNumber) {
         versionNumber = pVersionNumber;
-        isRandom = pIsRandom;
     }
 
     "Version corresponding to MD5 encoded String and namespace UUIDs"
-    shared new uuidVersion3 extends named(3,false) {}
+    shared new uuidVersion3 extends named(3) {}
 
     "Version corresponding to randomly generated UUIDs"
-    shared new uuidVersion4 extends named(4,true) {}
+    shared new uuidVersion4 extends named(4) {}
 
     "Version corresponding to SHA1 encoded String and namespace UUIDs"
-    shared new uuidVersion5 extends named(5,false) {}
+    shared new uuidVersion5 extends named(5) {}
 }
 
 "Determine a [[UuidSupportedVersion]] from a version number [[Integer]], ex 3."
@@ -61,6 +60,7 @@ shared UuidSupportedVersion? determineVersion(Integer versionNumber)
 "
 shared class UuidSupportedVariant
     of uuidVariant0 | uuidVariant2 | uuidVariant6 | uuidVariant7 {
+    "The [[Integer]] corresponding to the [[UUID]] variant."
     shared Integer variantNumber;
 
     abstract new named(Integer pVariantNumber) {
@@ -172,7 +172,7 @@ UUID convertedNamespaceAndName(UUID? namespace,
                                String name,
                                UuidSupportedVersion uuidVersion,
                                Byte[] convertBytes({Byte+} bytesToConvert)) {
-    assert(! uuidVersion.isRandom);
+    assert(UuidSupportedVersion.uuidVersion4 != uuidVersion);
 
     [Byte+] bytes = bytesFromNamespaceAndName(namespace, name);
 

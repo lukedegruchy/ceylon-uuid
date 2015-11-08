@@ -84,6 +84,7 @@ shared class UUID {
         return asHex;
     }
 
+    "The [[Byte]] [[Sequence]] for this [[UUID]]"
     shared Byte[] bytes {
         Byte[] timeLowBytes = uuidComponentAsBytes(mostSignificantBits, 8, 32);
         Byte[] timeMidBytes = uuidComponentAsBytes(mostSignificantBits, 4, 16);
