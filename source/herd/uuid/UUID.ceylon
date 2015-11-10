@@ -17,11 +17,12 @@ import herd.uuid {
     UuidSupportedVersion
 }
 
-" An implementation of Universal Unique Identifier (UUID).  See http://tools.ietf.org/html/rfc4122.
-  The current impelementation supports only a JDK backend due to dependencies upon [[java.security::MessageDigest]],
-  to produce random bytes, and to implement MD5/SHA-1 hashing, respectively.
+"An implementation of Universal Unique Identifier (UUID).  See [http://tools.ietf.org/html/rfc4122](http://tools.ietf.org/html/rfc4122)
 
-  According to the standard, the following components make up a UUID:
+ The current impelementation supports only a JDK backend due to dependencies upon [[java.security::MessageDigest]],
+ to produce random bytes, and to implement MD5/SHA-1 hashing, respectively.
+
+ According to the standard, the following components make up a UUID:
 
   - timeLow (8 digits)
   - timeMid (4 digits)
@@ -30,21 +31,21 @@ import herd.uuid {
   - clockSeqLow (2 digits)
   - node (12 digits)
 
-  For example, for the following UUID:  5561de0e-64ad-4d9b-94f2-46926fc44121:
+ For example, for the following UUID:  5561de0e-64ad-4d9b-94f2-46926fc44121:
 
-  - timeLow = 5561de0e
-  - timeMid = 64ad
-  - timeHiVersion = 4d9b
-  - clockSeqHiVariant = 94
-  - clockSeqLow = f2
-  - node = 46926fc44121
+ - timeLow = 5561de0e
+ - timeMid = 64ad
+ - timeHiVersion = 4d9b
+ - clockSeqHiVariant = 94
+ - clockSeqLow = f2
+ - node = 46926fc44121
 
-  Since the above UUID was generated randomly, its version is 4, and is the first digit of the timeHiVersion.
+ Since the above UUID was generated randomly, its version is 4, and is the first digit of the timeHiVersion.
 
-  The variant is 2.  Despite any variant with a leading bit of 1 being supported, with all variants
-  supported for either backward of future compatbility, only variant 2 is in actual use.
+ The variant is 2.  Despite any variant with a leading bit of 1 being supported, with all variants
+ supported for either backward of future compatbility, only variant 2 is in actual use.
 
-  Currently, only versions 3 (MD5 sum), 4 (randomly generated), and 5 (SHA1) are supported.
+ Currently, only versions 3 (MD5 sum), 4 (randomly generated), and 5 (SHA1) are supported.
 "
 shared class UUID {
     // TODO:  Consider supporting this as multiple components (ex timeLo, timeMid, etc) for JavaScript VM
