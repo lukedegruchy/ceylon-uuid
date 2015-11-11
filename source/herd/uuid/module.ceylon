@@ -1,6 +1,6 @@
 "An implementation of Universal Unique Identifier (UUID).  See [http://tools.ietf.org/html/rfc4122](http://tools.ietf.org/html/rfc4122)
 
- The current impelementation supports only a JDK backend due to dependencies upon [[java.security::MessageDigest]],
+ The current implementation supports only a JVM backend due to dependencies upon [[java.security::MessageDigest]],
  to produce random bytes, and to implement MD5/SHA-1 hashing, respectively.
 
  According to the standard, the following components make up a [[UUID]] :
@@ -36,11 +36,11 @@
 
  To generate a UUID version 3 as an MD5 hash of a String with
 
-        UUID uuidVersion3 = uuid3Md5(\"some strind\");
+        UUID uuidVersion3 = uuid3Md5(\"some string\");
 
  To generate a UUID version 5 as an SHA1 hash of a String and namespace with
 
-        UUID uuidVersion5 = uuid5Sha1(\"some string\", fromString(\"08110431-c913-4e72-b3e6-d3baad15f4db\");
+        UUID uuidVersion5 = uuid5Sha1(\"some string\", fromString(\"08110431-c913-4e72-b3e6-d3baad15f4db\"));
 
  To generate a random UUID version 4:
 
