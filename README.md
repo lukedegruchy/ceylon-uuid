@@ -30,7 +30,7 @@ For example, for the following UUID:  5561de0e-64ad-4d9b-94f2-46926fc44121:
 Since the above UUID was generated randomly, its version is 4, and is the first digit of the timeHiVersion.
 
 The variant is 2.  Despite any variant with a leading bit of 1 being supported, with all variants
-supported for either backward of future compatbility, only variant 2 is in actual use.
+supported for either backward or future compatibility, only variant 2 is in actual use.
 
 Currently, only versions 3 (MD5 sum), 4 (randomly generated), and 5 (SHA1) are supported.
 
