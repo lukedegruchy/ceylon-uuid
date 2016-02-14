@@ -5,13 +5,13 @@ import ceylon.interop.java {
 import ceylon.io.charset {
     utf8
 }
-
-import com.vasileff.ceylon.random.api {
-    LCGRandom
+import ceylon.random {
+    DefaultRandom
 }
-import com.vasileff.ceylon.xmath.long {
-    longNumber,
-    XLong=Long
+
+import com.vasileff.ceylon.integer64 {
+    Integer64,
+    integer64
 }
 
 import java.security {
@@ -35,7 +35,7 @@ shared Byte[] encodeBytes({Byte+} namedBytes,MessageDigest messageDigest)
     => messageDigest.digest(javaByteArray(Array(namedBytes))).byteArray.sequence();
 
 shared {Byte+} randomData(Integer size) {
-    Byte[] randomData = let (random=LCGRandom())
+    Byte[] randomData = let (random=DefaultRandom())
     (0:size).collect((thing) => random.nextByte());
 
     assert(nonempty randomData);
@@ -43,4 +43,9 @@ shared {Byte+} randomData(Integer size) {
     return randomData;
 }
 
-shared XLong byteToLong(Byte byte) => longNumber(byte.unsigned);
+shared Integer64 byteToInteger64(Byte byte) {
+    "Impossible for a Byte not to fit into a platform's Integer64"
+     assert(exists byteAs64 = integer64(byte.unsigned) );
+
+    return byteAs64;
+}

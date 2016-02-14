@@ -1,15 +1,15 @@
-import com.vasileff.ceylon.xmath.long {
-    longNumber,
-    XLong=Long
+import com.vasileff.ceylon.integer64 {
+    Integer64,
+    integer64
 }
 
 import herd.uuid.utility {
-    parseHexXLong,
     md5,
     randomData,
     sha1,
     stringToBytes,
-    byteToLong
+    byteToInteger64,
+    parseHexInteger64
 }
 
 
@@ -118,11 +118,11 @@ shared UUID? fromString("UUID as String to parse" String uuidString) {
         clockSeqString.size == clockSeqExpectedNumChars,
         nodeString.size == nodeExpectedNumChars) {
 
-        XLong? timeLow = parseHexXLong(timeLowString);
-        XLong? timeMid = parseHexXLong(timeMidString);
-        XLong? timeHiVersion = parseHexXLong(timeHiVersionString);
-        XLong? clockSeq = parseHexXLong(clockSeqString);
-        XLong? node = parseHexXLong(nodeString);
+        Integer64? timeLow = parseHexInteger64(timeLowString);
+        Integer64? timeMid = parseHexInteger64(timeMidString);
+        Integer64? timeHiVersion = parseHexInteger64(timeHiVersionString);
+        Integer64? clockSeq = parseHexInteger64(clockSeqString);
+        Integer64? node = parseHexInteger64(nodeString);
 
         if (exists timeLow,
             exists timeMid,
@@ -130,12 +130,14 @@ shared UUID? fromString("UUID as String to parse" String uuidString) {
             exists clockSeq,
             exists node,
             exists version = getValidVersion(timeHiVersion)) {
-            XLong? clockSeqHiVariant = clockSeq.rightLogicalShift(8);
-            XLong? clockSeqLow = clockSeq.and(longNumber(#ff));
+            Integer64 clockSeqHiVariant = clockSeq.rightLogicalShift(8);
 
-            if (exists clockSeqHiVariant,
-                exists clockSeqLow,
-                exists variant=getValidVariant(clockSeqHiVariant)) {
+            // TODO:  Assert #ff
+            "Impossible for a base64 #FF to not fit within a platform's Integer64"
+            assert(exists ffAs64 = integer64(#ff));
+            Integer64 clockSeqLow = clockSeq.and(ffAs64);
+
+            if (exists variant=getValidVariant(clockSeqHiVariant)) {
                 return fromComponents { timeLow = timeLow;
                                         timeMid = timeMid;
                                         timeHiVersion = timeHiVersion;
@@ -220,27 +222,27 @@ UUID? bytesToUuid(Byte[] randomData, UuidSupportedVersion uuidVersion) {
         exists byte15=randomData[14],
         exists byte16=randomData[15]) {
 
-        XLong timeLow =
-            byteToLong(byte1).leftLogicalShift(24)
-                .or(byteToLong(byte2).leftLogicalShift(16)
-                .or(byteToLong(byte3).leftLogicalShift(8)))
-                .or(byteToLong(byte4));
+        Integer64 timeLow =
+            byteToInteger64(byte1).leftLogicalShift(24)
+                .or(byteToInteger64(byte2).leftLogicalShift(16)
+                .or(byteToInteger64(byte3).leftLogicalShift(8)))
+                .or(byteToInteger64(byte4));
 
-        XLong timeMid =
-            byteToLong(byte5).leftLogicalShift(8).or(byteToLong(byte6));
+        Integer64 timeMid =
+            byteToInteger64(byte5).leftLogicalShift(8).or(byteToInteger64(byte6));
 
-        XLong timeHiVersion =
-            byteToLong(setVersion(byte7,uuidVersion)).leftLogicalShift(8).or(byteToLong(byte8));
+        Integer64 timeHiVersion =
+            byteToInteger64(setVersion(byte7,uuidVersion)).leftLogicalShift(8).or(byteToInteger64(byte8));
 
-        XLong clockSeqHiVariant = byteToLong(setVariant(byte9));
-        XLong clockSeqLow = byteToLong(byte10);
-        XLong node =
-            byteToLong(byte11).leftLogicalShift(40)
-                .or(byteToLong(byte12).leftLogicalShift(32))
-                .or(byteToLong(byte13).leftLogicalShift(24)
-                .or(byteToLong(byte14).leftLogicalShift(16)))
-                .or(byteToLong(byte15).leftLogicalShift(8))
-                .or(byteToLong(byte16));
+        Integer64 clockSeqHiVariant = byteToInteger64(setVariant(byte9));
+        Integer64 clockSeqLow = byteToInteger64(byte10);
+        Integer64 node =
+            byteToInteger64(byte11).leftLogicalShift(40)
+                .or(byteToInteger64(byte12).leftLogicalShift(32))
+                .or(byteToInteger64(byte13).leftLogicalShift(24)
+                .or(byteToInteger64(byte14).leftLogicalShift(16)))
+                .or(byteToInteger64(byte15).leftLogicalShift(8))
+                .or(byteToInteger64(byte16));
 
         return fromComponents { timeLow = timeLow;
                                 timeHiVersion = timeHiVersion;
@@ -253,66 +255,72 @@ UUID? bytesToUuid(Byte[] randomData, UuidSupportedVersion uuidVersion) {
     return null;
 }
 
-UUID fromComponents(XLong timeLow,
-                    XLong timeMid,
-                    XLong timeHiVersion,
-                    XLong clockSeqHiVariant,
-                    XLong clockSeqLow,
-                    XLong node) {
-    XLong toMostBits(XLong timeLow, XLong timeMid, XLong timeHiVersion) {
-        XLong shift32MostOne = timeLow.leftLogicalShift(32);
+UUID fromComponents(Integer64 timeLow,
+                    Integer64 timeMid,
+                    Integer64 timeHiVersion,
+                    Integer64 clockSeqHiVariant,
+                    Integer64 clockSeqLow,
+                    Integer64 node) {
+    Integer64 toMostBits(Integer64 timeLow, Integer64 timeMid, Integer64 timeHiVersion) {
+        Integer64 shift32MostOne = timeLow.leftLogicalShift(32);
 
-        XLong shift16MostTwo = timeMid.leftLogicalShift(16);
+        Integer64 shift16MostTwo = timeMid.leftLogicalShift(16);
 
-        XLong mostOneTwoThree = shift32MostOne.or(shift16MostTwo).or(timeHiVersion);
+        Integer64 mostOneTwoThree = shift32MostOne.or(shift16MostTwo).or(timeHiVersion);
 
         return mostOneTwoThree;
     }
 
-    XLong toLeastBits(XLong clockSeqHiVariant, XLong clockSeqLow, XLong node) {
-        XLong shift48ClockSeqHiVariant = clockSeqHiVariant.leftLogicalShift(56);
+    Integer64 toLeastBits(Integer64 clockSeqHiVariant, Integer64 clockSeqLow, Integer64 node) {
+        Integer64 shift48ClockSeqHiVariant = clockSeqHiVariant.leftLogicalShift(56);
 
-        XLong shift40ClockSeqLow = clockSeqLow.leftLogicalShift(48);
+        Integer64 shift40ClockSeqLow = clockSeqLow.leftLogicalShift(48);
 
-        XLong clockSeq = shift48ClockSeqHiVariant.or(shift40ClockSeqLow);
+        Integer64 clockSeq = shift48ClockSeqHiVariant.or(shift40ClockSeqLow);
 
-        XLong clockSeqOrNode = clockSeq.or(node);
+        Integer64 clockSeqOrNode = clockSeq.or(node);
 
         return clockSeqOrNode;
     }
 
-    XLong mostSignificantBits = toMostBits(timeLow, timeMid, timeHiVersion);
-    XLong leastSignificantBits = toLeastBits(clockSeqHiVariant, clockSeqLow, node);
+    Integer64 mostSignificantBits = toMostBits(timeLow, timeMid, timeHiVersion);
+    Integer64 leastSignificantBits = toLeastBits(clockSeqHiVariant, clockSeqLow, node);
 
     return UUID { mostSignificantBits = mostSignificantBits;
                   leastSignificantBits = leastSignificantBits; };
 }
 
-Integer? getValidVersion(XLong timeHiVersion)
+Integer? getValidVersion(Integer64 timeHiVersion)
     => let (actualVersion = getVersion(timeHiVersion))
        if (exists determinedVersion=determineVersion(actualVersion))
            then actualVersion
            else null;
 
-Integer? getValidVariant(XLong clockSeqHiVariant)
+Integer? getValidVariant(Integer64 clockSeqHiVariant)
         // First two bits of clockSeqHiVariant
     => let(actualVariant = getVariant(clockSeqHiVariant))
        if (exists determinedVariant=determineVariant(actualVariant))
             then actualVariant
             else null;
 
-Integer getVersion(XLong timeHiVersion)
+Integer getVersion(Integer64 timeHiVersion)
     =>  timeHiVersion.rightLogicalShift(12).preciseInteger;
 
-Integer getVariant(XLong clockSeqHiVariant)
+Integer getVariant(Integer64 clockSeqHiVariant)
     => clockSeqHiVariant.rightLogicalShift(6).preciseInteger;
 
-Integer getVersionFromMostSignificantBits(XLong mostSignificantBits)
-    => if (mostSignificantBits == 0)
-        then 0
-        else mostSignificantBits.rightArithmeticShift(12).and(longNumber(#f)).preciseInteger;
+Integer getVersionFromMostSignificantBits(Integer64 mostSignificantBits) {
+    if (mostSignificantBits == 0) {
+        return 0;
+    }
 
-Integer getVariantFromLeastSignificantBits(XLong leastSignificantBits)
+    "Impossible for a base64 #F to not fit within a platform's Integer64"
+    assert(exists fAs64=integer64(#f));
+
+    return mostSignificantBits.rightArithmeticShift(12).and(fAs64).preciseInteger;
+}
+
+Integer getVariantFromLeastSignificantBits(Integer64 leastSignificantBits)
     => leastSignificantBits.rightLogicalShift(62).preciseInteger;
 
 Byte setVersion(Byte timeHiVersionPart, UuidSupportedVersion version)

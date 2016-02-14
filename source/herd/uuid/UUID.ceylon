@@ -1,10 +1,10 @@
-import com.vasileff.ceylon.xmath.long {
-    XLong=Long,
-    longNumber
+import com.vasileff.ceylon.integer64 {
+    Integer64,
+    integer64
 }
 
 import herd.chayote.bytes {
-    longToBytesNoZeros
+    integer64ToBytesNoZeros
 }
 import herd.chayote.format {
     formatAndPadAsHexNoUnderscores
@@ -49,12 +49,12 @@ import herd.uuid {
 "
 shared class UUID {
     // TODO:  Consider supporting this as multiple components (ex timeLo, timeMid, etc) for JavaScript VM
-    XLong mostSignificantBits;
-    XLong leastSignificantBits;
+    Integer64 mostSignificantBits;
+    Integer64 leastSignificantBits;
 
     "This constructor is not meant to be exposed outside of the module.  Clients should invoke
      one of the top-level functions to obtain a UUID."
-    sealed shared new(XLong mostSignificantBits,XLong leastSignificantBits) {
+    sealed shared new(Integer64 mostSignificantBits,Integer64 leastSignificantBits) {
         this.mostSignificantBits = mostSignificantBits;
         this.leastSignificantBits = leastSignificantBits;
 
@@ -70,18 +70,26 @@ shared class UUID {
         assert(exists determinedVariant);
     }
 
-    Byte[] uuidComponentAsBytes(XLong valParam, Integer digits, Integer? rightShift=null)
-        => longToBytesNoZeros(uuidComponentAsXLong(valParam, digits, rightShift));
+    Byte[] uuidComponentAsBytes(Integer64 valParam, Integer digits, Integer? rightShift=null)
+        => integer64ToBytesNoZeros(uuidComponentAsInteger64(valParam, digits, rightShift));
 
-    XLong uuidComponentAsXLong(XLong valParam, Integer digits, Integer? rightShift=null)
-        => let(val = if (exists rightShift)
-                        then valParam.rightLogicalShift(rightShift)
-                        else valParam )
-           val.and(longNumber((16 ^ digits) -1));
+    Integer64 uuidComponentAsInteger64(Integer64 valParam, Integer digits, Integer? rightShift=null) {
+        "No reason to calculate base-64 exponent over 12"
+        assert(digits <= 12);
 
-    String uuidComponentAsString(XLong valParam, Integer digits, Integer? rightShift=null) {
-        XLong uuidComponentXLong = uuidComponentAsXLong(valParam,digits,rightShift);
-        assert(exists asHex=formatAndPadAsHexNoUnderscores(uuidComponentXLong,digits));
+        value extractedValue = if (exists rightShift)
+                                then valParam.rightLogicalShift(rightShift)
+                                else valParam;
+
+        "Impossible, #ffff_ffff_ffff cannot overflow on either platform"
+        assert(exists int64 = integer64((16 ^ digits) -1));
+
+        return extractedValue.and(int64);
+    }
+
+    String uuidComponentAsString(Integer64 valParam, Integer digits, Integer? rightShift=null) {
+        Integer64 uuidComponentInteger64 = uuidComponentAsInteger64(valParam,digits,rightShift);
+        assert(exists asHex=formatAndPadAsHexNoUnderscores(uuidComponentInteger64,digits));
         return asHex;
     }
 

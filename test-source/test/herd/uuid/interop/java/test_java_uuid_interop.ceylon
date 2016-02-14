@@ -1,6 +1,7 @@
 import ceylon.test {
     test,
-    assertEquals
+    assertEquals,
+    fail
 }
 
 import herd.uuid {
@@ -22,7 +23,7 @@ void testToJavaUuid() {
     void assertMe() {
         value uuid = uuid4Random();
         value javaUuid = toJavaUuid(uuid);
-        
+
         assertEquals(javaUuid.string, uuid.string);
     }
 
@@ -37,7 +38,11 @@ void testToUuid() {
         value javaUuid = randomUUID();
         value uuid = toUuid(javaUuid);
 
-        assertEquals(uuid.string, javaUuid.string);
+        if (exists uuid) {
+            assertEquals(uuid.string, javaUuid.string);
+        } else {
+            fail("UUID did not successfully convert from Java UUID");
+        }
     }
     for(ii in 1..20) {
         assertMe();

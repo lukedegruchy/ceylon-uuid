@@ -85,7 +85,7 @@ Also, there is a [[TypedUUID]] class that subclasses the herd.chayote [[herd.cha
         assertFalse(accountId1.equals(referenceId1);
         assertFalse(referenceId2.equals(accountId2);
 
-Current version: 0.0.10
+Current version: 0.0.11
 
 Version history:
 
@@ -111,3 +111,4 @@ operations involving versions.
 functions/constants.  Add a TypedUUID based on Chayote TypedClass.
 - 0.0.9: Replace all Integer uses that involve collections of Bytes or bits with Ceylon xmath Long (aliased as XLong).  Update to chayote 0.0.10.
 - 0.0.10:  Prepare to publish to Herd. Increase version to 0.0.10. Update to Chayote 0.0.12. Improve documentation. Add support for ceylon-xmath from the Herd module. Remove functions duplicated with herd.chayote. Make bytesToUuid unshared and move its unit test to main module. Eliminate a bunch of TODOS.
+- 0.0.11:  Port to integer64 from xmath.  Update for Ceylon 1.2.1.

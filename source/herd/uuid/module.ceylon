@@ -77,13 +77,13 @@
  "
 // TODO:  Support JavaScript runtime once native SHA1 and MD5 support is available
 native("jvm")
-module herd.uuid "0.0.10" {
-    import ceylon.collection "1.2.0";
-    import ceylon.interop.java "1.2.0";
-    import ceylon.io "1.2.0";
-    import ceylon.test "1.2.0";
-    import com.vasileff.ceylon.random.api "0.0.5";
-    shared import com.vasileff.ceylon.xmath "0.0.1";
-    shared import herd.chayote "0.0.12";
+module herd.uuid "0.0.11" {
+    import ceylon.collection "1.2.1";
+    import ceylon.interop.java "1.2.1";
+    import ceylon.io "1.2.1";
+    import ceylon.test "1.2.1";
+    import ceylon.random "1.2.1";
+    shared import com.vasileff.ceylon.integer64 "1.0.0";
+    shared import herd.chayote "0.0.13";
     shared import java.base "8";
 }
