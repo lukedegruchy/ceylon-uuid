@@ -60,10 +60,10 @@
 
         UUID javaUuid = toUuid(javaUuid);
 
- Also, there is a [[TypedUUID]] class that subclasses the herd.chayote [[herd.chayote.type_classes::TypedClass]].
+ Also, there is a [[WrappedUUID]] class that subclasses the herd.chayote [[herd.chayote.wrapper_type::WrapperType]].
 
-        class AccountId(UUID baseValue) extends TypedUUID(baseValue) {}
-        class ReferenceId(UUID baseValue) extends TypedUUID(baseValue) {}
+        class AccountId(UUID baseValue) extends WrappedUUID(baseValue) {}
+        class ReferenceId(UUID baseValue) extends WrappedUUID(baseValue) {}
 
         value accountId1 = AccountId(fromString());
         value accountId2 = AccountId(fromString());
@@ -77,13 +77,14 @@
  "
 // TODO:  Support JavaScript runtime once native SHA1 and MD5 support is available
 native("jvm")
-module herd.uuid "0.0.11" {
-    import ceylon.collection "1.2.1";
-    import ceylon.interop.java "1.2.1";
-    import ceylon.io "1.2.1";
-    import ceylon.test "1.2.1";
-    import ceylon.random "1.2.1";
-    shared import com.vasileff.ceylon.integer64 "1.0.0";
-    shared import herd.chayote "0.0.13";
+module herd.uuid "0.0.12" {
+    import ceylon.buffer "1.2.2";
+    import ceylon.collection "1.2.2";
+    import ceylon.interop.java "1.2.2";
+    import ceylon.io "1.2.2";
+    import ceylon.test "1.2.2";
+    import ceylon.random "1.2.2";
+    shared import com.vasileff.ceylon.integer64 "1.0.2";
+    shared import herd.chayote "0.0.14";
     shared import java.base "8";
 }

@@ -70,10 +70,10 @@ To obtain a [[UUID]] from a Java [[java.util::UUID]]:
 
         UUID javaUuid = toUuid(javaUuid);
 
-Also, there is a [[TypedUUID]] class that subclasses the herd.chayote [[herd.chayote.type_classes::TypedClass]].
+Also, there is a [[WrappedUUID]] class that subclasses the herd.chayote [[herd.chayote.wrapper_type::WrapperType]].
 
-        class AccountId(UUID baseValue) extends TypedUUID(baseValue) {}
-        class ReferenceId(UUID baseValue) extends TypedUUID(baseValue) {}
+        class AccountId(UUID baseValue) extends WrappedUUID(baseValue) {}
+        class ReferenceId(UUID baseValue) extends WrappedUUID(baseValue) {}
 
         value accountId1 = AccountId(fromString());
         value accountId2 = AccountId(fromString());
@@ -85,7 +85,7 @@ Also, there is a [[TypedUUID]] class that subclasses the herd.chayote [[herd.cha
         assertFalse(accountId1.equals(referenceId1);
         assertFalse(referenceId2.equals(accountId2);
 
-Current version: 0.0.11
+Current version: 0.0.12
 
 Version history:
 
@@ -112,3 +112,4 @@ functions/constants.  Add a TypedUUID based on Chayote TypedClass.
 - 0.0.9: Replace all Integer uses that involve collections of Bytes or bits with Ceylon xmath Long (aliased as XLong).  Update to chayote 0.0.10.
 - 0.0.10:  Prepare to publish to Herd. Increase version to 0.0.10. Update to Chayote 0.0.12. Improve documentation. Add support for ceylon-xmath from the Herd module. Remove functions duplicated with herd.chayote. Make bytesToUuid unshared and move its unit test to main module. Eliminate a bunch of TODOS.
 - 0.0.11:  Port to integer64 from xmath.  Update for Ceylon 1.2.1.
+- 0.0.12:  Update for Ceylon 1.2.2.  Use Chayote 0.0.14.  Rename TypedUUID to WrappedUUID.

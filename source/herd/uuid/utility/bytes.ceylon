@@ -1,9 +1,9 @@
+import ceylon.buffer.charset {
+    utf8
+}
 import ceylon.interop.java {
     createJavaByteArray,
     javaByteArray
-}
-import ceylon.io.charset {
-    utf8
 }
 import ceylon.random {
     DefaultRandom
